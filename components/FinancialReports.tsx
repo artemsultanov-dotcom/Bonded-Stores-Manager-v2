@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CrewMember, Product, Transaction, TransactionType, ReportSettings, TransactionItem } from '../types';
-import { FileText, RefreshCw, Edit2, Trash2, X, Save, Calendar, Filter, Plus, Printer } from 'lucide-react';
+import { FileText, RefreshCw, Edit2, Trash2, X, Save, Calendar, Filter, Plus, Printer, Type } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -22,10 +22,14 @@ const RANKS = [
 
 const CATEGORIES = ['Cigarettes', 'Soft Drinks', 'Water', 'Snacks', 'Other'];
 
+const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20];
+
 export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, products, transactions, settings, updateTransaction, t }) => {
   const [activeTab, setActiveTab] = useState<'PAYROLL' | 'INVENTORY' | 'HISTORY' | 'MONTHLY' | 'REPRESENTATION' | 'ORDER_SHEET'>('PAYROLL');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+  const [orderTableFontSize, setOrderTableFontSize] = useState(15);
+  const [orderHeaderFontSize, setOrderHeaderFontSize] = useState(10);
   const [historyRecipientFilter, setHistoryRecipientFilter] = useState<string>('ALL');
   
   // Editing State
@@ -531,7 +535,36 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
         <div className="flex items-center gap-2">
            {activeTab === 'ORDER_SHEET' && (
              <>
-               <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-2 mr-2"><Calendar className="w-4 h-4 text-slate-500 dark:text-slate-300" /><input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="bg-transparent outline-none text-sm text-slate-700 dark:text-white font-bold" /></div>
+               <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-2">
+                  <Calendar className="w-4 h-4 text-slate-500 dark:text-slate-300" />
+                  <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="bg-transparent outline-none text-sm text-slate-700 dark:text-white font-bold" />
+               </div>
+               <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-2" title="Header Font Size">
+                  <Type className="w-4 h-4 text-slate-500 dark:text-slate-300" />
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">Header</span>
+                  <select 
+                    value={orderHeaderFontSize} 
+                    onChange={(e) => setOrderHeaderFontSize(parseInt(e.target.value))}
+                    className="bg-transparent outline-none text-sm text-slate-700 dark:text-white font-bold"
+                  >
+                    {FONT_SIZES.map(size => (
+                      <option key={size} value={size}>{size}px</option>
+                    ))}
+                  </select>
+               </div>
+               <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-2 mr-2" title="Table Font Size">
+                  <Type className="w-4 h-4 text-slate-500 dark:text-slate-300" />
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">Table</span>
+                  <select 
+                    value={orderTableFontSize} 
+                    onChange={(e) => setOrderTableFontSize(parseInt(e.target.value))}
+                    className="bg-transparent outline-none text-sm text-slate-700 dark:text-white font-bold"
+                  >
+                    {FONT_SIZES.map(size => (
+                      <option key={size} value={size}>{size}px</option>
+                    ))}
+                  </select>
+               </div>
                <button onClick={handlePrint} className="bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-bold transition-all shadow-sm hover:scale-105 active:scale-95 border border-slate-200 dark:border-slate-600"><Printer className="w-5 h-5" /> {t('print')}</button>
              </>
            )}
@@ -675,25 +708,65 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                      <table className="w-full text-left border-collapse text-[11px] print:text-[9px]">
                         <thead>
                            <tr className="bg-[#1e3a8a] text-white print:bg-[#1e3a8a] print:text-white">
-                             <th className="p-3 border border-[#1e3a8a] text-center w-10 print:p-1">#</th>
-                             <th className="p-3 border border-[#1e3a8a] w-56 font-bold uppercase print:p-1">{t('name')}</th>
-                             <th className="p-3 border border-[#1e3a8a] w-36 font-bold uppercase print:p-1">{t('rank')}</th>
+                             <th 
+                              className="p-3 border border-[#1e3a8a] text-center w-10 print:p-1"
+                              style={{ fontSize: `${orderHeaderFontSize}px` }}
+                             >
+                               #
+                             </th>
+                             <th 
+                              className="p-3 border border-[#1e3a8a] w-56 font-bold uppercase print:p-1"
+                              style={{ fontSize: `${orderHeaderFontSize}px` }}
+                             >
+                               {t('name')}
+                             </th>
+                             <th 
+                              className="p-3 border border-[#1e3a8a] w-36 font-bold uppercase print:p-1"
+                              style={{ fontSize: `${orderHeaderFontSize}px` }}
+                             >
+                               {t('rank')}
+                             </th>
                              {products.sort((a,b) => CATEGORIES.indexOf(a.category) - CATEGORIES.indexOf(b.category) || a.name.localeCompare(b.name)).map(p => (
                                <th key={p.id} className="p-0 border border-[#1e3a8a] w-10 align-bottom h-40 print:h-24">
                                  <div className="flex justify-center items-end h-full pb-4 print:pb-2">
-                                   <span className="whitespace-nowrap [writing-mode:vertical-rl] rotate-180 font-bold tracking-widest text-[10px] print:text-[8px]">{p.name}</span>
+                                   <span 
+                                    className="whitespace-nowrap [writing-mode:vertical-rl] rotate-180 font-bold tracking-widest"
+                                    style={{ fontSize: `${orderHeaderFontSize}px` }}
+                                   >
+                                     {p.name}
+                                   </span>
                                  </div>
                                </th>
                              ))} 
-                             <th className="p-3 border border-[#1e3a8a] w-40 text-center font-bold uppercase print:p-1">{t('signature')}</th>
+                             <th 
+                              className="p-3 border border-[#1e3a8a] w-40 text-center font-bold uppercase print:p-1"
+                              style={{ fontSize: `${orderHeaderFontSize}px` }}
+                             >
+                               {t('signature')}
+                             </th>
                            </tr>
                         </thead>
                         <tbody>
                            {crew.filter(c => c.isActive).sort((a,b) => RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank) || a.name.localeCompare(b.name)).map((member, idx) => (
                              <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 print:hover:bg-transparent">
-                               <td className="p-3 border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-400 print:p-1">{idx + 1}</td>
-                               <td className="p-3 border border-slate-300 dark:border-slate-600 font-bold text-slate-800 dark:text-white print:p-1">{member.name}</td>
-                               <td className="p-3 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 font-medium print:p-1">{member.rank}</td>
+                               <td 
+                                className="p-3 border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-400 print:p-1"
+                                style={{ fontSize: `${orderTableFontSize}px` }}
+                               >
+                                 {idx + 1}
+                               </td>
+                               <td 
+                                 className="p-3 border border-slate-300 dark:border-slate-600 font-bold text-slate-800 dark:text-white print:p-1"
+                                 style={{ fontSize: `${orderTableFontSize}px` }}
+                               >
+                                 {member.name}
+                               </td>
+                               <td 
+                                 className="p-3 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 font-medium print:p-1"
+                                 style={{ fontSize: `${orderTableFontSize}px` }}
+                               >
+                                 {member.rank}
+                               </td>
                                {products.map(p => (
                                  <td key={p.id} className="p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 print:p-1"></td>
                                ))} 
