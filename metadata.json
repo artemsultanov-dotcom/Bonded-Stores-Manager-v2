@@ -1,0 +1,5 @@
+{
+  "name": "BSManager3",
+  "description": "An application for accounting for ship stores (Bonded Store), inventory management, issuing goods to the crew, and generating financial statements.",
+  "requestFramePermissions": []
+}
