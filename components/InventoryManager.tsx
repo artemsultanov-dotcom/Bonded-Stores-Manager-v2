@@ -16,10 +16,8 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Ref for auto-focusing Name field
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Form State (Using strings for numbers to allow empty values in inputs)
   const [name, setName] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [price, setPrice] = useState('');
@@ -63,9 +61,8 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
     setProducts([...products, newProduct]);
     resetForm();
     
-    // Set cursor back to Name field
     setTimeout(() => {
-        setIsAdding(true); // Keep adding mode open as requested by "place cursor in Name cell" flow
+        setIsAdding(true);
         setTimeout(() => nameInputRef.current?.focus(), 0);
     }, 0);
   };
@@ -113,15 +110,25 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
     }
   };
 
-  // Helper to calculate stock stats
+  const getWeekOfMonth = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const day = date.getDate();
+    return Math.min(Math.ceil(day / 7), 5);
+  };
+
   const getProductStats = (product: Product) => {
     let crewOut = 0;
     let repOut = 0;
+    const weeklyCrewOut = [0, 0, 0, 0, 0];
 
     transactions.forEach(t => {
       const item = t.items.find(i => i.productId === product.id);
       if (item) {
-        if (t.type === TransactionType.CREW) crewOut += item.quantity;
+        if (t.type === TransactionType.CREW) {
+          crewOut += item.quantity;
+          const week = getWeekOfMonth(t.timestamp);
+          weeklyCrewOut[week - 1] += item.quantity;
+        }
         if (t.type === TransactionType.REPRESENTATION) repOut += item.quantity;
       }
     });
@@ -130,10 +137,9 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
     const totalOut = crewOut + repOut;
     const currentStock = (product.initialStock + totalAdded) - totalOut;
 
-    return { crewOut, repOut, currentStock };
+    return { crewOut, repOut, currentStock, weeklyCrewOut };
   };
 
-  // Memoized totals calculation for the footer and cigarette summary
   const { totals, cigaretteStats } = useMemo(() => {
     let tInitial = 0;
     let tS1 = 0;
@@ -142,11 +148,12 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
     let tCurrent = 0;
     let tCrewOut = 0;
     let tRepOut = 0;
+    const tWeeklyCrew = [0, 0, 0, 0, 0];
 
     let cigCartons = 0;
 
     products.forEach(p => {
-       const { currentStock, crewOut, repOut } = getProductStats(p);
+       const { currentStock, crewOut, repOut, weeklyCrewOut } = getProductStats(p);
        const pValue = p.price;
        
        tInitial += p.initialStock * pValue;
@@ -157,14 +164,17 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
        tCrewOut += crewOut * pValue;
        tRepOut += repOut * pValue;
 
-       // Cigarette stats
+       weeklyCrewOut.forEach((qty, idx) => {
+         tWeeklyCrew[idx] += qty * pValue;
+       });
+
        if (p.category === 'Cigarettes') {
          cigCartons += currentStock;
        }
     });
 
     return { 
-      totals: { tInitial, tS1, tS2, tS3, tCurrent, tCrewOut, tRepOut },
+      totals: { tInitial, tS1, tS2, tS3, tCurrent, tCrewOut, tRepOut, tWeeklyCrew },
       cigaretteStats: {
         cartons: cigCartons,
         units: cigCartons * 200
@@ -175,7 +185,6 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       
-      {/* Cigarette Summary Card */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-800 dark:to-slate-900 rounded-xl p-6 text-white shadow-lg flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
@@ -240,7 +249,6 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
               </select>
             </div>
             
-            {/* Price, Unit Type, Pack Size */}
             <div className="flex gap-2">
                <div className="flex-1">
                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('price')}</label>
@@ -267,7 +275,6 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
               <input type="number" value={initialStock} onChange={(e) => setInitialStock(e.target.value)} className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             
-            {/* 3 Supplies Inputs */}
             <div className="grid grid-cols-3 gap-2 lg:col-span-2">
                <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">{t('supply_1')}</label>
@@ -293,16 +300,22 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
       )}
 
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[1100px]">
+        <table className="w-full text-left border-collapse min-w-[1300px]">
           <thead className="bg-slate-50 dark:bg-slate-700">
             <tr>
               <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase">{t('name')}</th>
               <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-right text-xs uppercase">{t('price')}</th>
               <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase">{t('initial_stock')}</th>
               
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('supply_1')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('supply_2')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('supply_3')}</th>
+              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('sup1_short')}</th>
+              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('sup2_short')}</th>
+              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('sup3_short')}</th>
+
+              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk1')}</th>
+              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk2')}</th>
+              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk3')}</th>
+              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk4')}</th>
+              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk5')}</th>
 
               <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-blue-50/50 dark:bg-blue-900/10">{t('col_out_crew')}</th>
               <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-purple-50/50 dark:bg-purple-900/10">{t('col_out_rep')}</th>
@@ -315,29 +328,22 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
             {products.length === 0 ? (
                <React.Fragment>
                   <tr className="bg-slate-100 dark:bg-slate-700/80 opacity-60">
-                    <td colSpan={10} className="px-4 py-2 font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider border-y border-slate-200 dark:border-slate-600">
+                    <td colSpan={15} className="px-4 py-2 font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider border-y border-slate-200 dark:border-slate-600">
                       Cigarettes (Example)
                     </td>
                   </tr>
                   <tr className="border-b border-slate-100 dark:border-slate-700 opacity-50 bg-slate-50/50 dark:bg-slate-800/50 pointer-events-none grayscale">
-                    <td className="p-3 font-medium text-slate-800 dark:text-slate-200">
-                      Marlboro Red (Example)
-                      <span className="ml-2 text-xs text-slate-400 font-normal">(1 ctn)</span>
-                    </td>
+                    <td className="p-3 font-medium text-slate-800 dark:text-slate-200">Marlboro Red (Example)</td>
                     <td className="p-3 text-slate-800 dark:text-slate-300 text-right font-mono">15.500</td>
                     <td className="p-3 text-slate-600 dark:text-slate-400 text-center">50</td>
-                    
-                    <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/30 dark:bg-green-900/5">+10</td>
-                    <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/30 dark:bg-green-900/5">-</td>
-                    <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/30 dark:bg-green-900/5">-</td>
-                    
-                    <td className="p-3 text-slate-600 dark:text-slate-300 text-center bg-blue-50/50 dark:bg-blue-900/10">5</td>
-                    <td className="p-3 text-slate-600 dark:text-slate-300 text-center bg-purple-50/50 dark:bg-purple-900/10">2</td>
-                    
-                    <td className="p-3 text-slate-800 dark:text-white text-center bg-slate-100 dark:bg-slate-900/40 font-bold">53</td>
-                    <td className="p-3 text-right text-xs text-slate-400 italic">
-                      (Example)
-                    </td>
+                    <td className="p-3 text-center bg-green-50/30 dark:bg-green-900/5 text-green-600">+10</td>
+                    <td className="p-3 text-center bg-green-50/30 dark:bg-green-900/5 text-slate-400">-</td>
+                    <td className="p-3 text-center bg-green-50/30 dark:bg-green-900/5 text-slate-400">-</td>
+                    <td colSpan={5} className="p-3 text-center text-slate-400 italic">Weekly breakdown</td>
+                    <td className="p-3 text-center bg-blue-50/50 dark:bg-blue-900/10">5</td>
+                    <td className="p-3 text-center bg-purple-50/50 dark:bg-purple-900/10">2</td>
+                    <td className="p-3 text-center bg-slate-100 dark:bg-slate-900/40 font-bold">53</td>
+                    <td className="p-3 text-right text-xs text-slate-400">Example</td>
                   </tr>
                </React.Fragment>
             ) : (
@@ -349,28 +355,32 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
                     return (
                       <React.Fragment key={category}>
                         <tr className="bg-slate-100 dark:bg-slate-700/80">
-                          <td colSpan={10} className="px-4 py-2 font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider border-y border-slate-200 dark:border-slate-600">
+                          <td colSpan={15} className="px-4 py-2 font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider border-y border-slate-200 dark:border-slate-600">
                             {t(`cat_${category.toLowerCase().replace(/ /g, '_')}`) || category}
                           </td>
                         </tr>
                         
                         {categoryProducts.map(product => {
-                          const { crewOut, repOut, currentStock } = getProductStats(product);
+                          const { crewOut, repOut, currentStock, weeklyCrewOut } = getProductStats(product);
                           return (
-                            <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm">
+                            <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm transition-colors">
                               <td className="p-3 font-medium text-slate-800 dark:text-slate-200">
                                 {product.name}
-                                <span className="ml-2 text-xs text-slate-400 font-normal">({product.packSize || 1} {product.unitType || 'pcs'})</span>
+                                <span className="ml-2 text-[10px] text-slate-400 font-normal uppercase">({product.packSize || 1}{product.unitType || 'pcs'})</span>
                               </td>
                               <td className="p-3 text-slate-800 dark:text-slate-300 text-right font-mono">{product.price.toFixed(3)}</td>
                               <td className="p-3 text-slate-600 dark:text-slate-400 text-center">{product.initialStock}</td>
                               
-                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/30 dark:bg-green-900/5">{product.addedStock1 > 0 ? `+${product.addedStock1}` : '-'}</td>
-                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/30 dark:bg-green-900/5">{product.addedStock2 > 0 ? `+${product.addedStock2}` : '-'}</td>
-                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/30 dark:bg-green-900/5">{product.addedStock3 > 0 ? `+${product.addedStock3}` : '-'}</td>
+                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/20 dark:bg-green-900/5">{product.addedStock1 > 0 ? `+${product.addedStock1}` : '-'}</td>
+                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/20 dark:bg-green-900/5">{product.addedStock2 > 0 ? `+${product.addedStock2}` : '-'}</td>
+                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/20 dark:bg-green-900/5">{product.addedStock3 > 0 ? `+${product.addedStock3}` : '-'}</td>
                               
-                              <td className="p-3 text-slate-600 dark:text-slate-300 text-center bg-blue-50/50 dark:bg-blue-900/10">{crewOut}</td>
-                              <td className="p-3 text-slate-600 dark:text-slate-300 text-center bg-purple-50/50 dark:bg-purple-900/10">{repOut}</td>
+                              {weeklyCrewOut.map((qty, idx) => (
+                                <td key={idx} className="p-3 text-center text-slate-400 text-xs bg-blue-50/10 dark:bg-blue-900/5">{qty > 0 ? qty : '-'}</td>
+                              ))}
+
+                              <td className="p-3 text-slate-700 dark:text-slate-200 text-center bg-blue-50/30 dark:bg-blue-900/10 font-medium">{crewOut}</td>
+                              <td className="p-3 text-slate-600 dark:text-slate-300 text-center bg-purple-50/30 dark:bg-purple-900/10">{repOut}</td>
                               
                               <td className="p-3 text-slate-800 dark:text-white text-center bg-slate-100 dark:bg-slate-900/40 font-bold">{currentStock}</td>
                               <td className="p-3 flex justify-end gap-2">
@@ -387,49 +397,22 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
                       </React.Fragment>
                     );
                   })}
-                  
-                  {/* Fallback for others */}
-                  {products.filter(p => !CATEGORIES.includes(p.category)).map(product => {
-                      const { crewOut, repOut, currentStock } = getProductStats(product);
-                      return (
-                        <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 last:border-0 bg-red-50/10">
-                          <td className="p-3 font-medium text-slate-800 dark:text-slate-200">
-                            {product.name}
-                            <span className="ml-2 text-xs text-slate-400 font-normal">({product.packSize || 1} {product.unitType || 'pcs'})</span>
-                          </td>
-                          <td className="p-3 text-slate-800 dark:text-slate-300 text-right font-mono">{product.price.toFixed(3)}</td>
-                          <td className="p-3 text-slate-600 dark:text-slate-400 text-center">{product.initialStock}</td>
-                          <td className="p-3 text-center text-green-600 dark:text-green-400">{product.addedStock1 > 0 ? `+${product.addedStock1}` : '-'}</td>
-                          <td className="p-3 text-center text-green-600 dark:text-green-400">{product.addedStock2 > 0 ? `+${product.addedStock2}` : '-'}</td>
-                          <td className="p-3 text-center text-green-600 dark:text-green-400">{product.addedStock3 > 0 ? `+${product.addedStock3}` : '-'}</td>
-                          <td className="p-3 text-slate-600 dark:text-slate-300 text-center bg-blue-50/50 dark:bg-blue-900/10">{crewOut}</td>
-                          <td className="p-3 text-slate-600 dark:text-slate-300 text-center bg-purple-50/50 dark:bg-purple-900/10">{repOut}</td>
-                          <td className="p-3 text-slate-800 dark:text-white text-center bg-slate-100 dark:bg-slate-900/40 font-bold">{currentStock}</td>
-                          <td className="p-3 flex justify-end gap-2">
-                            <button onClick={() => startEdit(product)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full">
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => handleDelete(product.id)} className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                  })}
                </React.Fragment>
             )}
           </tbody>
-          {/* TOTALS FOOTER */}
           <tfoot className="bg-slate-200 dark:bg-slate-900 border-t-2 border-slate-300 dark:border-slate-600 sticky bottom-0 shadow-inner">
-             <tr className="font-bold text-xs text-slate-800 dark:text-slate-200">
-               <td className="p-3 uppercase text-right" colSpan={2}>{t('total_value')}</td>
+             <tr className="font-bold text-[10px] text-slate-800 dark:text-slate-200 uppercase tracking-tighter">
+               <td className="p-3 text-right" colSpan={2}>{t('total_value')}</td>
                <td className="p-3 text-center font-mono">€{totals.tInitial.toFixed(2)}</td>
                <td className="p-3 text-center font-mono text-green-700 dark:text-green-400">€{totals.tS1.toFixed(2)}</td>
                <td className="p-3 text-center font-mono text-green-700 dark:text-green-400">€{totals.tS2.toFixed(2)}</td>
                <td className="p-3 text-center font-mono text-green-700 dark:text-green-400">€{totals.tS3.toFixed(2)}</td>
+               {totals.tWeeklyCrew.map((val, idx) => (
+                 <td key={idx} className="p-3 text-center font-mono text-blue-600/70 dark:text-blue-400/50">€{val.toFixed(2)}</td>
+               ))}
                <td className="p-3 text-center font-mono text-blue-700 dark:text-blue-400">€{totals.tCrewOut.toFixed(2)}</td>
                <td className="p-3 text-center font-mono text-purple-700 dark:text-purple-400">€{totals.tRepOut.toFixed(2)}</td>
-               <td className="p-3 text-center font-mono text-slate-800 dark:text-slate-200 text-sm">€{totals.tCurrent.toFixed(2)}</td>
+               <td className="p-3 text-center font-mono text-slate-800 dark:text-slate-200 text-xs">€{totals.tCurrent.toFixed(2)}</td>
                <td className="p-3"></td>
              </tr>
           </tfoot>
