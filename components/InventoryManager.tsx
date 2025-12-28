@@ -146,13 +146,13 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
           <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-700">
-                <th className="p-4 sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.05)] w-64">{t('name')}</th>
-                <th className="p-4 text-right">€/Unit</th>
-                <th className="p-4 text-center">Start</th>
-                <th className="p-4 text-center bg-green-50/30 dark:bg-green-900/10">Supplies</th>
-                <th className="p-4 text-center bg-blue-50/30 dark:bg-blue-900/10" colSpan={5}>Weekly Issues (Crew)</th>
-                <th className="p-4 text-center font-bold text-slate-900 dark:text-white">Current</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="py-2 px-4 sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.05)] w-64">{t('name')}</th>
+                <th className="py-2 px-4 text-right">€/Unit</th>
+                <th className="py-2 px-4 text-center">Start</th>
+                <th className="py-2 px-4 text-center bg-green-50/30 dark:bg-green-900/10">Supplies</th>
+                <th className="py-2 px-4 text-center bg-blue-50/30 dark:bg-blue-900/10" colSpan={5}>Weekly Issues (Crew)</th>
+                <th className="py-2 px-4 text-center font-bold text-slate-900 dark:text-white">Current</th>
+                <th className="py-2 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -161,19 +161,19 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
                 if (!items.length) return null;
                 return (
                   <React.Fragment key={cat}>
-                    <tr className="bg-slate-50/50 dark:bg-slate-800/30"><td colSpan={11} className="px-4 py-2 text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{cat}</td></tr>
+                    <tr className="bg-slate-50/50 dark:bg-slate-800/30"><td colSpan={11} className="px-4 py-1.5 text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{cat}</td></tr>
                     {items.map(p => {
                       const stats = getProductStats(p);
                       return (
                         <tr key={p.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                          <td className="p-4 sticky left-0 bg-white dark:bg-slate-800 group-hover:bg-inherit z-10 shadow-[2px_0_10px_rgba(0,0,0,0.02)]">
-                             <div className="font-bold text-slate-800 dark:text-slate-200">{p.name}</div>
-                             <div className="text-[10px] text-slate-400 font-bold uppercase">{p.unitType} × {p.packSize}</div>
+                          <td className="py-1.5 px-4 sticky left-0 bg-white dark:bg-slate-800 group-hover:bg-inherit z-10 shadow-[2px_0_10px_rgba(0,0,0,0.02)]">
+                             <div className="font-bold text-slate-800 dark:text-slate-200 text-sm">{p.name}</div>
+                             <div className="text-[9px] text-slate-400 font-bold uppercase">{p.unitType} × {p.packSize}</div>
                           </td>
-                          <td className="p-4 text-right font-mono font-bold text-slate-600">€{p.price.toFixed(2)}</td>
-                          <td className="p-4 text-center font-bold text-slate-500">{p.initialStock}</td>
-                          <td className="p-4 text-center bg-green-50/20 dark:bg-green-900/5">
-                             <div className="flex gap-2 justify-center text-[11px] font-bold">
+                          <td className="py-1.5 px-4 text-right font-mono font-bold text-slate-600 text-sm">€{p.price.toFixed(2)}</td>
+                          <td className="py-1.5 px-4 text-center font-bold text-slate-500 text-sm">{p.initialStock}</td>
+                          <td className="py-1.5 px-4 text-center bg-green-50/20 dark:bg-green-900/5">
+                             <div className="flex gap-2 justify-center text-[10px] font-bold">
                                 {p.addedStock1 > 0 && <span className="text-green-600">+{p.addedStock1}</span>}
                                 {p.addedStock2 > 0 && <span className="text-green-600">+{p.addedStock2}</span>}
                                 {p.addedStock3 > 0 && <span className="text-green-600">+{p.addedStock3}</span>}
@@ -181,13 +181,13 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
                              </div>
                           </td>
                           {stats.weekly.map((qty, idx) => (
-                             <td key={idx} className="p-4 text-center text-xs font-bold text-slate-400 bg-blue-50/10 dark:bg-blue-900/5">{qty > 0 ? qty : '-'}</td>
+                             <td key={idx} className="py-1.5 px-4 text-center text-[10px] font-bold text-slate-400 bg-blue-50/10 dark:bg-blue-900/5">{qty > 0 ? qty : '-'}</td>
                           ))}
-                          <td className="p-4 text-center"><div className={`inline-block px-3 py-1 rounded-full font-black text-sm ${stats.current < 5 ? 'bg-red-100 text-red-700' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-white'}`}>{stats.current}</div></td>
-                          <td className="p-4 text-right">
-                             <div className="flex justify-end gap-2">
-                                <button onClick={() => startEdit(p)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => setProducts(products.filter(item => item.id !== p.id))} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                          <td className="py-1.5 px-4 text-center"><div className={`inline-block px-2.5 py-0.5 rounded-full font-black text-xs ${stats.current < 5 ? 'bg-red-100 text-red-700' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-white'}`}>{stats.current}</div></td>
+                          <td className="py-1.5 px-4 text-right">
+                             <div className="flex justify-end gap-1">
+                                <button onClick={() => startEdit(p)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"><Edit2 className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => setProducts(products.filter(item => item.id !== p.id))} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
                              </div>
                           </td>
                         </tr>
