@@ -1,12 +1,13 @@
+
 import React, { useState } from 'react';
 import { ReportSettings } from '../types';
-import { Ship, User, Calendar, Settings, AlertTriangle, ArrowRight, DollarSign, Trash2 } from 'lucide-react';
+import { Ship, User, Calendar, Settings, AlertTriangle, ArrowRight, DollarSign, Trash2, Globe, ShieldAlert } from 'lucide-react';
 
 interface DashboardProps {
   settings: ReportSettings;
   setSettings: (settings: ReportSettings) => void;
   onResetMonth: (nextMonth: string, nextYear: string) => void;
-  onHardReset?: () => void; // Optional for backward compatibility, but we'll use it
+  onHardReset: () => void;
   t: (key: string) => string;
 }
 
@@ -14,10 +15,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ settings, setSettings, onR
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isHardResetModalOpen, setIsHardResetModalOpen] = useState(false);
   
-  // Calculate default next month logic
   const currentM = parseInt(settings.reportMonth);
   const currentY = parseInt(settings.reportYear);
-  const nextDate = new Date(currentY, currentM, 1); // Month is 0-indexed in Date, but reportMonth is 1-indexed, so passing currentM (1-12) effectively gives next month because JS date month is 0-11.
+  const nextDate = new Date(currentY, currentM, 1);
   
   const [nextMonth, setNextMonth] = useState(String(nextDate.getMonth() + 1).padStart(2, '0'));
   const [nextYear, setNextYear] = useState(String(nextDate.getFullYear()));
@@ -27,238 +27,110 @@ export const Dashboard: React.FC<DashboardProps> = ({ settings, setSettings, onR
     return { value: m, label: t(`month_${m}`) };
   });
 
-  const handleChange = (key: keyof ReportSettings, value: string | number) => {
-    setSettings({ ...settings, [key]: value });
-  };
-
-  const handleConfirmReset = () => {
-    onResetMonth(nextMonth, nextYear);
-    setIsResetModalOpen(false);
-  };
-
-  const handleConfirmHardReset = () => {
-    if (onHardReset) {
-      onHardReset();
-      setIsHardResetModalOpen(false);
-    }
-  };
-
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in pb-12">
-      <div className="flex items-center gap-3 mb-8">
-        <Settings className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-        <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{t('dashboard_title')}</h2>
-      </div>
-
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 p-8 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          
-          {/* Vessel & Master */}
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                <Ship className="w-4 h-4" /> {t('vessel_name')}
-              </label>
-              <input 
-                type="text" 
-                value={settings.vesselName} 
-                onChange={(e) => handleChange('vesselName', e.target.value)}
-                className="w-full text-lg bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                placeholder="MV Example"
-              />
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
+      
+      {/* Settings Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+         
+         <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-3 mb-8">
+               <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400"><Globe className="w-5 h-5" /></div>
+               <h3 className="text-xl font-black tracking-tight">{t('dashboard_title')}</h3>
             </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                <User className="w-4 h-4" /> {t('master_name')}
-              </label>
-              <input 
-                type="text" 
-                value={settings.masterName} 
-                onChange={(e) => handleChange('masterName', e.target.value)}
-                className="w-full text-lg bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                placeholder="Capt. John Doe"
-              />
-            </div>
-          </div>
-
-          {/* Date Settings */}
-          <div className="space-y-6">
-             <div className="grid grid-cols-2 gap-4">
-               <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" /> {t('report_year')}
-                  </label>
-                  <input 
-                    type="number" 
-                    value={settings.reportYear} 
-                    onChange={(e) => handleChange('reportYear', e.target.value)}
-                    className="w-full text-lg bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                    placeholder="2024"
-                  />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div className="space-y-6">
+                  <div className="group">
+                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1 group-focus-within:text-blue-600 transition-colors">{t('vessel_name')}</label>
+                     <input type="text" value={settings.vesselName} onChange={e => setSettings({...settings, vesselName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold" placeholder="MV Example" />
+                  </div>
+                  <div className="group">
+                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1 group-focus-within:text-blue-600 transition-colors">{t('master_name')}</label>
+                     <input type="text" value={settings.masterName} onChange={e => setSettings({...settings, masterName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold" placeholder="Capt. John Doe" />
+                  </div>
                </div>
-               <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" /> {t('exchange_rate')}
-                  </label>
-                  <input 
-                    type="number" 
-                    step="0.0001"
-                    value={settings.exchangeRate} 
-                    onChange={(e) => handleChange('exchangeRate', Number(e.target.value))}
-                    className="w-full text-lg bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-                    placeholder="1.10"
-                  />
+               
+               <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="group">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1">{t('report_year')}</label>
+                        <input type="number" value={settings.reportYear} onChange={e => setSettings({...settings, reportYear: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold" />
+                     </div>
+                     <div className="group">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1">{t('exchange_rate')}</label>
+                        <div className="relative">
+                           <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                           <input type="number" step="0.0001" value={settings.exchangeRate} onChange={e => setSettings({...settings, exchangeRate: Number(e.target.value)})} className="w-full pl-9 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold" />
+                        </div>
+                     </div>
+                  </div>
+                  <div className="group">
+                     <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1">{t('report_month')}</label>
+                     <select value={settings.reportMonth} onChange={e => setSettings({...settings, reportMonth: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 font-bold appearance-none cursor-pointer">
+                        {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                     </select>
+                  </div>
                </div>
-             </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4" /> {t('report_month')}
-              </label>
-              <select 
-                value={settings.reportMonth} 
-                onChange={(e) => handleChange('reportMonth', e.target.value)}
-                className="w-full text-lg bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
-              >
-                {months.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
             </div>
-          </div>
-        </div>
-        
-        <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
-          * These settings will be applied to all reports (Payroll, Inventory, History).
-        </div>
+         </div>
+
+         {/* Dangerous Actions Sidebar */}
+         <div className="flex flex-col gap-6">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex-1 flex flex-col">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-xl text-orange-600 dark:text-orange-400"><AlertTriangle className="w-5 h-5" /></div>
+                  <h4 className="font-bold text-sm uppercase tracking-tight">{t('reset_section')}</h4>
+               </div>
+               <p className="text-xs text-slate-500 leading-relaxed mb-6">Transition to the next month. Automatically carries over ending stock as the new initial stock.</p>
+               <button onClick={() => setIsResetModalOpen(true)} className="mt-auto w-full py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-orange-500/20 transition-all active:scale-95">Next Month</button>
+            </div>
+            <div className="bg-red-50 dark:bg-red-900/10 rounded-3xl p-6 border border-red-100 dark:border-red-900/30 shadow-sm flex flex-col">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl text-red-600"><Trash2 className="w-5 h-5" /></div>
+                  <h4 className="font-bold text-sm uppercase tracking-tight text-red-800 dark:text-red-300">{t('hard_reset_section')}</h4>
+               </div>
+               <button onClick={() => setIsHardResetModalOpen(true)} className="w-full py-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-600 font-bold text-[10px] uppercase tracking-widest hover:bg-red-50 transition-all">{t('hard_reset_btn')}</button>
+            </div>
+         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* MONTH RESET ZONE */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 flex flex-col justify-between">
-           <div className="flex items-start gap-4 mb-4">
-              <div className="p-3 bg-slate-100 dark:bg-slate-700 rounded-full shrink-0">
-                <AlertTriangle className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-              </div>
-              <div>
-                 <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">{t('reset_section')}</h3>
-                 <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                   {t('reset_desc')}
-                 </p>
-              </div>
-           </div>
-           <button 
-              onClick={() => setIsResetModalOpen(true)}
-              className="bg-green-400 hover:bg-green-500 text-black px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors mt-auto w-full"
-           >
-             {t('reset_btn')} <ArrowRight className="w-4 h-4" />
-           </button>
-        </div>
-
-        {/* FACTORY RESET ZONE */}
-        <div className="bg-red-50 dark:bg-red-900/10 rounded-xl shadow-sm border border-red-100 dark:border-red-900/30 p-8 flex flex-col justify-between">
-           <div className="flex items-start gap-4 mb-4">
-              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full shrink-0">
-                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                 <h3 className="text-xl font-bold text-red-800 dark:text-red-300 mb-2">{t('hard_reset_section')}</h3>
-                 <p className="text-red-700 dark:text-red-400 text-sm leading-relaxed">
-                   {t('hard_reset_desc')}
-                 </p>
-              </div>
-           </div>
-           <button 
-              onClick={() => setIsHardResetModalOpen(true)}
-              className="bg-white dark:bg-slate-800 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors mt-auto w-full"
-           >
-             {t('hard_reset_btn')}
-           </button>
-        </div>
-      </div>
-
-      {/* MONTH RESET CONFIRMATION MODAL */}
+      {/* Month Reset Modal */}
       {isResetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-fade-in border border-slate-200 dark:border-slate-700">
-             <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
-                <AlertTriangle className="w-8 h-8" />
-                <h3 className="text-2xl font-bold">{t('reset_modal_title')}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl max-w-lg w-full p-10 border border-slate-200 dark:border-slate-700">
+             <div className="flex flex-col items-center text-center mb-8">
+                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600 mb-6"><ShieldAlert className="w-10 h-10" /></div>
+                <h3 className="text-3xl font-black tracking-tighter mb-2">{t('reset_modal_title')}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">{t('reset_desc')}</p>
              </div>
              
-             <p className="text-slate-600 dark:text-slate-300 mb-4">
-               {t('reset_warning')} <br/>
-               {t('reset_desc')}
-             </p>
-
-             <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl mb-6">
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                   {t('select_next_month')}
-                </label>
-                <div className="flex gap-4">
-                   <select 
-                      value={nextMonth} 
-                      onChange={(e) => setNextMonth(e.target.value)}
-                      className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {months.map(m => (
-                        <option key={m.value} value={m.value}>{m.label}</option>
-                      ))}
-                    </select>
-                    <input 
-                      type="number"
-                      value={nextYear}
-                      onChange={(e) => setNextYear(e.target.value)}
-                      className="w-24 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+             <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-3xl mb-8 border border-slate-100 dark:border-slate-800">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 text-center">Select Starting Period</label>
+                <div className="flex gap-3">
+                   <select value={nextMonth} onChange={e => setNextMonth(e.target.value)} className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold text-sm">{months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select>
+                   <input type="number" value={nextYear} onChange={e => setNextYear(e.target.value)} className="w-28 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold text-sm" />
                 </div>
              </div>
 
-             <div className="flex justify-end gap-3">
-                <button 
-                  onClick={() => setIsResetModalOpen(false)}
-                  className="px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg font-medium"
-                >
-                  {t('cancel')}
-                </button>
-                <button 
-                  onClick={handleConfirmReset}
-                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-lg shadow-red-200 dark:shadow-none"
-                >
-                  {t('confirm_reset')}
-                </button>
+             <div className="flex flex-col gap-3">
+                <button onClick={() => { onResetMonth(nextMonth, nextYear); setIsResetModalOpen(false); }} className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-orange-500/20">{t('confirm_reset')}</button>
+                <button onClick={() => setIsResetModalOpen(false)} className="w-full py-3 text-slate-500 font-bold hover:text-slate-800 dark:hover:text-white transition-colors">{t('cancel')}</button>
              </div>
           </div>
         </div>
       )}
 
-      {/* HARD RESET CONFIRMATION MODAL */}
+      {/* Hard Reset Modal */}
       {isHardResetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in border border-red-200 dark:border-red-900">
-             <div className="flex items-center gap-3 text-red-600 dark:text-red-500 mb-4">
-                <Trash2 className="w-8 h-8" />
-                <h3 className="text-2xl font-bold">{t('hard_reset_title')}</h3>
-             </div>
-             
-             <p className="text-slate-600 dark:text-slate-300 mb-6 font-medium">
-               {t('hard_reset_desc')}
-             </p>
-
-             <div className="flex justify-end gap-3">
-                <button 
-                  onClick={() => setIsHardResetModalOpen(false)}
-                  className="px-5 py-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg font-medium"
-                >
-                  {t('cancel')}
-                </button>
-                <button 
-                  onClick={handleConfirmHardReset}
-                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow-lg shadow-red-200 dark:shadow-none"
-                >
-                  {t('hard_reset_confirm')}
-                </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-red-900/20 backdrop-blur-md animate-in zoom-in duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl max-w-md w-full p-8 border border-red-100 dark:border-red-900/30 text-center">
+             <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center text-red-600 mx-auto mb-6"><Trash2 className="w-8 h-8" /></div>
+             <h3 className="text-2xl font-black tracking-tight mb-4">{t('hard_reset_title')}</h3>
+             <p className="text-sm text-slate-500 mb-8">{t('hard_reset_desc')}</p>
+             <div className="flex flex-col gap-2">
+                <button onClick={() => { onHardReset(); setIsHardResetModalOpen(false); }} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-red-600/20">{t('hard_reset_confirm')}</button>
+                <button onClick={() => setIsHardResetModalOpen(false)} className="w-full py-3 text-slate-500 font-bold hover:text-slate-800 dark:hover:text-white transition-colors">{t('cancel')}</button>
              </div>
           </div>
         </div>
