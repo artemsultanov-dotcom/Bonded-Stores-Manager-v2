@@ -140,14 +140,68 @@ function App() {
   const t = (key: string): string => translations['en'][key] || key;
 
   const handleSaveProject = async () => {
-    const projectData = { version: '1.5', timestamp: new Date().toISOString(), crew, products, transactions, settings: reportSettings };
-    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+    const projectData = { 
+      version: '1.5', 
+      timestamp: new Date().toISOString(), 
+      crew, 
+      products, 
+      transactions, 
+      settings: reportSettings 
+    };
+    const jsonString = JSON.stringify(projectData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const filename = `BSM_Backup_${new Date().toISOString().slice(0,10)}.json`;
+
+    // Try to use File System Access API to pick path
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'Bonded Store Manager Project File',
+            accept: { 'application/json': ['.json'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return; // Success
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          return; // User cancelled
+        }
+        console.warn('File system picker failed, falling back to download:', err);
+      }
+    }
+
+    // Fallback to traditional download if API not supported or failed
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `BSM_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleLoadProject = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        if (data.crew) setCrew(data.crew);
+        if (data.products) setProducts(data.products);
+        if (data.transactions) setTransactions(data.transactions);
+        if (data.settings) setReportSettings(data.settings);
+        alert(t('import_success'));
+      } catch (err) {
+        alert(t('import_error'));
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset input
   };
 
   const navItems = [
@@ -206,7 +260,7 @@ function App() {
            <div className="grid grid-cols-2 gap-2 mb-4">
               <button onClick={handleSaveProject} className="flex items-center justify-center gap-2 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors text-xs font-bold text-slate-300"><Download className="w-3.5 h-3.5 text-green-500" /> Backup</button>
               <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors text-xs font-bold text-slate-300"><Upload className="w-3.5 h-3.5 text-blue-500" /> Restore</button>
-              <input type="file" ref={fileInputRef} onChange={(e) => {/* load logic */}} accept=".json" className="hidden" />
+              <input type="file" ref={fileInputRef} onChange={handleLoadProject} accept=".json" className="hidden" />
            </div>
            <div className="flex items-center justify-between px-2">
               <button onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} className="p-2 bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-all">
