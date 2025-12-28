@@ -1,7 +1,7 @@
-
 import React, { useState, useMemo, useRef } from 'react';
 import { Product, Transaction, TransactionType } from '../types';
-import { Package, Plus, Edit2, Trash2, Save, Cigarette } from 'lucide-react';
+// Fixed: Added 'X' to the lucide-react imports
+import { Package, Plus, Edit2, Trash2, Save, Cigarette, ChevronDown, ListFilter, X } from 'lucide-react';
 
 interface InventoryManagerProps {
   products: Product[];
@@ -15,408 +15,190 @@ const CATEGORIES = ['Cigarettes', 'Soft Drinks', 'Water', 'Snacks', 'Other'];
 export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, setProducts, transactions, t }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState(CATEGORIES[0]);
-  const [price, setPrice] = useState('');
-  const [unitType, setUnitType] = useState('pcs');
-  const [packSize, setPackSize] = useState('1');
-  const [initialStock, setInitialStock] = useState('');
-  const [addedStock1, setAddedStock1] = useState('');
-  const [addedStock2, setAddedStock2] = useState('');
-  const [addedStock3, setAddedStock3] = useState('');
+  const [form, setForm] = useState({
+    name: '', category: CATEGORIES[0], price: '', unitType: 'pcs', packSize: '1',
+    initialStock: '', addedStock1: '', addedStock2: '', addedStock3: ''
+  });
 
   const resetForm = () => {
-    setName('');
-    setCategory(CATEGORIES[0]);
-    setPrice('');
-    setUnitType('pcs');
-    setPackSize('1');
-    setInitialStock('');
-    setAddedStock1('');
-    setAddedStock2('');
-    setAddedStock3('');
-    setIsAdding(false);
-    setEditingId(null);
+    setForm({ name: '', category: CATEGORIES[0], price: '', unitType: 'pcs', packSize: '1', initialStock: '', addedStock1: '', addedStock2: '', addedStock3: '' });
+    setIsAdding(false); setEditingId(null);
   };
 
-  const handleAdd = () => {
-    if (!name) return;
-    const numPrice = Number(price) || 0;
-    
-    const newProduct: Product = {
-      id: crypto.randomUUID(),
-      name,
-      category: category,
-      price: numPrice,
-      unitType,
-      packSize: Number(packSize) || 1,
-      initialStock: Number(initialStock) || 0,
-      addedStock1: Number(addedStock1) || 0,
-      addedStock2: Number(addedStock2) || 0,
-      addedStock3: Number(addedStock3) || 0,
+  const handleSave = () => {
+    if (!form.name) return;
+    const prodData: Product = {
+      id: editingId || crypto.randomUUID(),
+      name: form.name, category: form.category, price: Number(form.price) || 0,
+      unitType: form.unitType, packSize: Number(form.packSize) || 1,
+      initialStock: Number(form.initialStock) || 0,
+      addedStock1: Number(form.addedStock1) || 0, addedStock2: Number(form.addedStock2) || 0, addedStock3: Number(form.addedStock3) || 0
     };
-    setProducts([...products, newProduct]);
+    if (editingId) setProducts(products.map(p => p.id === editingId ? prodData : p));
+    else setProducts([...products, prodData]);
     resetForm();
-    
-    setTimeout(() => {
-        setIsAdding(true);
-        setTimeout(() => nameInputRef.current?.focus(), 0);
-    }, 0);
   };
 
-  const startEdit = (product: Product) => {
-    setEditingId(product.id);
-    setName(product.name);
-    setCategory(product.category);
-    setPrice(product.price.toString());
-    setUnitType(product.unitType || 'pcs');
-    setPackSize(product.packSize?.toString() || '1');
-    setInitialStock(product.initialStock.toString());
-    setAddedStock1(product.addedStock1.toString());
-    setAddedStock2(product.addedStock2.toString());
-    setAddedStock3(product.addedStock3.toString());
+  const startEdit = (p: Product) => {
+    setEditingId(p.id);
+    setForm({
+      name: p.name, category: p.category, price: p.price.toString(), unitType: p.unitType || 'pcs', packSize: p.packSize?.toString() || '1',
+      initialStock: p.initialStock.toString(), addedStock1: p.addedStock1.toString(), addedStock2: p.addedStock2.toString(), addedStock3: p.addedStock3.toString()
+    });
     setIsAdding(true);
-    setTimeout(() => nameInputRef.current?.focus(), 0);
+    setTimeout(() => nameInputRef.current?.focus(), 100);
   };
 
-  const handleUpdate = () => {
-    if (!editingId || !name) return;
-    const updated = products.map(p => 
-      p.id === editingId 
-        ? { 
-            ...p, 
-            name, 
-            category, 
-            price: Number(price) || 0, 
-            unitType,
-            packSize: Number(packSize) || 1,
-            initialStock: Number(initialStock) || 0, 
-            addedStock1: Number(addedStock1) || 0,
-            addedStock2: Number(addedStock2) || 0,
-            addedStock3: Number(addedStock3) || 0
-          } 
-        : p
-    );
-    setProducts(updated);
-    resetForm();
-  };
-
-  const handleDelete = (id: string) => {
-    if (window.confirm(t('delete_confirm_product'))) {
-      setProducts(products.filter(p => p.id !== id));
-    }
-  };
-
-  const getWeekOfMonth = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const day = date.getDate();
-    return Math.min(Math.ceil(day / 7), 5);
-  };
-
-  const getProductStats = (product: Product) => {
-    let crewOut = 0;
-    let repOut = 0;
-    const weeklyCrewOut = [0, 0, 0, 0, 0];
-
+  const getProductStats = (p: Product) => {
+    let crewOut = 0; let repOut = 0;
+    const weekly = [0,0,0,0,0];
     transactions.forEach(t => {
-      const item = t.items.find(i => i.productId === product.id);
+      const item = t.items.find(i => i.productId === p.id);
       if (item) {
         if (t.type === TransactionType.CREW) {
           crewOut += item.quantity;
-          const week = getWeekOfMonth(t.timestamp);
-          weeklyCrewOut[week - 1] += item.quantity;
-        }
-        if (t.type === TransactionType.REPRESENTATION) repOut += item.quantity;
+          const week = Math.min(Math.ceil(new Date(t.timestamp).getDate() / 7), 5);
+          weekly[week-1] += item.quantity;
+        } else repOut += item.quantity;
       }
     });
-
-    const totalAdded = product.addedStock1 + product.addedStock2 + product.addedStock3;
-    const totalOut = crewOut + repOut;
-    const currentStock = (product.initialStock + totalAdded) - totalOut;
-
-    return { crewOut, repOut, currentStock, weeklyCrewOut };
+    return { crewOut, repOut, current: (p.initialStock + p.addedStock1 + p.addedStock2 + p.addedStock3) - (crewOut + repOut), weekly };
   };
 
-  const { totals, cigaretteStats } = useMemo(() => {
-    let tInitial = 0;
-    let tS1 = 0;
-    let tS2 = 0;
-    let tS3 = 0;
-    let tCurrent = 0;
-    let tCrewOut = 0;
-    let tRepOut = 0;
-    const tWeeklyCrew = [0, 0, 0, 0, 0];
-
-    let cigCartons = 0;
-
-    products.forEach(p => {
-       const { currentStock, crewOut, repOut, weeklyCrewOut } = getProductStats(p);
-       const pValue = p.price;
-       
-       tInitial += p.initialStock * pValue;
-       tS1 += p.addedStock1 * pValue;
-       tS2 += p.addedStock2 * pValue;
-       tS3 += p.addedStock3 * pValue;
-       tCurrent += currentStock * pValue;
-       tCrewOut += crewOut * pValue;
-       tRepOut += repOut * pValue;
-
-       weeklyCrewOut.forEach((qty, idx) => {
-         tWeeklyCrew[idx] += qty * pValue;
-       });
-
-       if (p.category === 'Cigarettes') {
-         cigCartons += currentStock;
-       }
-    });
-
-    return { 
-      totals: { tInitial, tS1, tS2, tS3, tCurrent, tCrewOut, tRepOut, tWeeklyCrew },
-      cigaretteStats: {
-        cartons: cigCartons,
-        units: cigCartons * 200
-      }
-    };
+  const totals = useMemo(() => {
+    return products.reduce((acc, p) => {
+       const stats = getProductStats(p);
+       acc.val += stats.current * p.price;
+       if (p.category === 'Cigarettes') acc.cig += stats.current;
+       return acc;
+    }, { val: 0, cig: 0 });
   }, [products, transactions]);
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 dark:from-slate-800 dark:to-slate-900 rounded-xl p-6 text-white shadow-lg flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
-             <Cigarette className="w-8 h-8 text-yellow-400" />
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-slate-300 uppercase tracking-wide">{t('total_cigarettes')}</h3>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">{cigaretteStats.cartons}</span>
-              <span className="text-sm text-slate-300">{t('cartons')}</span>
+      {/* Visual Header */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl shadow-blue-500/20 flex items-center justify-between overflow-hidden relative">
+            <div className="relative z-10">
+               <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-100/80 mb-2">Inventory Value</p>
+               <h3 className="text-4xl font-black">€{totals.val.toFixed(2)}</h3>
             </div>
-          </div>
-        </div>
-        <div className="text-right border-l border-white/10 pl-6">
-           <p className="text-xs text-slate-400 uppercase font-medium">{t('units')}</p>
-           <p className="text-2xl font-mono font-bold text-yellow-400">{cigaretteStats.units.toLocaleString()}</p>
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-          <Package className="w-6 h-6" />
-          {t('inventory')}
-        </h2>
-        <button
-          onClick={() => {
-              setIsAdding(true);
-              setTimeout(() => nameInputRef.current?.focus(), 0);
-          }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          disabled={isAdding && !editingId}
-        >
-          <Plus className="w-4 h-4" /> {t('add_product')}
-        </button>
+            <Package className="w-32 h-32 absolute -right-4 -bottom-4 text-white/10 rotate-12" />
+         </div>
+         <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between relative overflow-hidden group">
+            <div className="flex items-center gap-4 relative z-10">
+               <div className="w-14 h-14 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl flex items-center justify-center text-yellow-600"><Cigarette className="w-8 h-8" /></div>
+               <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Cigarettes Stock</p>
+                  <div className="flex flex-col">
+                    <p className="text-2xl font-black leading-tight">{totals.cig} <span className="text-xs text-slate-400 font-bold uppercase tracking-normal">Cartons</span></p>
+                    <p className="text-[11px] font-bold text-blue-500/80 dark:text-blue-400/80">{(totals.cig * 200).toLocaleString()} <span className="uppercase tracking-tighter text-[9px]">Sticks Total</span></p>
+                  </div>
+               </div>
+            </div>
+            <button onClick={() => setIsAdding(true)} className="p-4 bg-slate-900 dark:bg-slate-700 text-white rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg relative z-10"><Plus className="w-6 h-6" /></button>
+            <Cigarette className="w-24 h-24 absolute -right-6 -bottom-6 text-slate-100 dark:text-slate-700/30 -rotate-12 group-hover:rotate-0 transition-transform duration-500" />
+         </div>
       </div>
 
       {isAdding && (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700">
-          <h3 className="font-semibold mb-4 text-lg text-slate-800 dark:text-white">{editingId ? t('edit_product') : t('add_product')}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="lg:col-span-1">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('name')}</label>
-              <input 
-                ref={nameInputRef}
-                type="text" 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-                className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500" 
-                placeholder="Marlboro Red" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('category')}</label>
-              <select 
-                value={category} 
-                onChange={(e) => setCategory(e.target.value)} 
-                className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2.5 outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="flex gap-2">
-               <div className="flex-1">
-                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('price')}</label>
-                 <input 
-                    type="number" 
-                    step="0.001" 
-                    value={price} 
-                    onChange={(e) => setPrice(e.target.value)} 
-                    className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500" 
-                 />
-               </div>
-               <div className="w-20">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('unit_type')}</label>
-                  <input type="text" value={unitType} onChange={(e) => setUnitType(e.target.value)} placeholder="pcs" className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500 text-center" />
-               </div>
-               <div className="w-16">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1" title={t('pack_size')}>Size</label>
-                  <input type="number" value={packSize} onChange={(e) => setPackSize(e.target.value)} className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500 text-center" />
-               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t('initial_stock')}</label>
-              <input type="number" value={initialStock} onChange={(e) => setInitialStock(e.target.value)} className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            
-            <div className="grid grid-cols-3 gap-2 lg:col-span-2">
-               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">{t('supply_1')}</label>
-                <input type="number" value={addedStock1} onChange={(e) => setAddedStock1(e.target.value)} className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500" />
-               </div>
-               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">{t('supply_2')}</label>
-                <input type="number" value={addedStock2} onChange={(e) => setAddedStock2(e.target.value)} className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500" />
-               </div>
-               <div>
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">{t('supply_3')}</label>
-                <input type="number" value={addedStock3} onChange={(e) => setAddedStock3(e.target.value)} className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 outline-none focus:ring-2 focus:ring-blue-500" />
-               </div>
-            </div>
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-[32px] shadow-2xl border border-slate-200 dark:border-slate-700 animate-in zoom-in duration-200">
+          <div className="flex items-center justify-between mb-8">
+             <h3 className="text-xl font-black tracking-tight">{editingId ? 'Edit Product' : 'Register New Product'}</h3>
+             <button onClick={resetForm} className="p-2 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
-          <div className="flex justify-end gap-3 mt-4">
-            <button onClick={resetForm} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">{t('cancel')}</button>
-            <button onClick={editingId ? handleUpdate : handleAdd} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2">
-              <Save className="w-4 h-4" /> {t('save')}
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="lg:col-span-2 group">
+              <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1 group-focus-within:text-blue-600 transition-colors">{t('name')}</label>
+              <input ref={nameInputRef} type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold" />
+            </div>
+            <div className="group">
+              <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('category')}</label>
+              <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold appearance-none">{CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
+            </div>
+            <div className="group">
+              <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('price')}</label>
+              <input type="number" step="0.001" value={form.price} onChange={e => setForm({...form, price: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold" />
+            </div>
+            <div className="group">
+              <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('initial_stock')}</label>
+              <input type="number" value={form.initialStock} onChange={e => setForm({...form, initialStock: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold" />
+            </div>
+            {['1', '2', '3'].map(num => (
+              <div key={num} className="group">
+                 <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t(`supply_${num}`)}</label>
+                 <input type="number" value={(form as any)[`addedStock${num}`]} onChange={e => setForm({...form, [`addedStock${num}`]: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold" />
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={handleSave} className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-blue-600/20 flex items-center gap-2"><Save className="w-4 h-4" /> Save Product</button>
           </div>
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[1300px]">
-          <thead className="bg-slate-50 dark:bg-slate-700">
-            <tr>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase">{t('name')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-right text-xs uppercase">{t('price')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase">{t('initial_stock')}</th>
-              
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('sup1_short')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('sup2_short')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-green-50/50 dark:bg-green-900/10">{t('sup3_short')}</th>
-
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk1')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk2')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk3')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk4')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-500 dark:text-slate-400 text-center text-[10px] uppercase bg-blue-50/30 dark:bg-blue-900/5">{t('wk5')}</th>
-
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-blue-50/50 dark:bg-blue-900/10">{t('col_out_crew')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-purple-50/50 dark:bg-purple-900/10">{t('col_out_rep')}</th>
-              
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-center text-xs uppercase bg-slate-100 dark:bg-slate-900/40">{t('current_stock')}</th>
-              <th className="p-3 border-b border-slate-200 dark:border-slate-600 font-semibold text-slate-600 dark:text-slate-300 text-right text-xs uppercase">{t('actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length === 0 ? (
-               <React.Fragment>
-                  <tr className="bg-slate-100 dark:bg-slate-700/80 opacity-60">
-                    <td colSpan={15} className="px-4 py-2 font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider border-y border-slate-200 dark:border-slate-600">
-                      Cigarettes (Example)
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-100 dark:border-slate-700 opacity-50 bg-slate-50/50 dark:bg-slate-800/50 pointer-events-none grayscale">
-                    <td className="p-3 font-medium text-slate-800 dark:text-slate-200">Marlboro Red (Example)</td>
-                    <td className="p-3 text-slate-800 dark:text-slate-300 text-right font-mono">15.500</td>
-                    <td className="p-3 text-slate-600 dark:text-slate-400 text-center">50</td>
-                    <td className="p-3 text-center bg-green-50/30 dark:bg-green-900/5 text-green-600">+10</td>
-                    <td className="p-3 text-center bg-green-50/30 dark:bg-green-900/5 text-slate-400">-</td>
-                    <td className="p-3 text-center bg-green-50/30 dark:bg-green-900/5 text-slate-400">-</td>
-                    <td colSpan={5} className="p-3 text-center text-slate-400 italic">Weekly breakdown</td>
-                    <td className="p-3 text-center bg-blue-50/50 dark:bg-blue-900/10">5</td>
-                    <td className="p-3 text-center bg-purple-50/50 dark:bg-purple-900/10">2</td>
-                    <td className="p-3 text-center bg-slate-100 dark:bg-slate-900/40 font-bold">53</td>
-                    <td className="p-3 text-right text-xs text-slate-400">Example</td>
-                  </tr>
-               </React.Fragment>
-            ) : (
-                <React.Fragment>
-                  {CATEGORIES.map(category => {
-                    const categoryProducts = products.filter(p => p.category === category);
-                    if (categoryProducts.length === 0) return null;
-
-                    return (
-                      <React.Fragment key={category}>
-                        <tr className="bg-slate-100 dark:bg-slate-700/80">
-                          <td colSpan={15} className="px-4 py-2 font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider border-y border-slate-200 dark:border-slate-600">
-                            {t(`cat_${category.toLowerCase().replace(/ /g, '_')}`) || category}
+      {/* Modern Table Container */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-900/50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-700">
+                <th className="p-4 sticky left-0 bg-slate-50 dark:bg-slate-900/50 z-10 shadow-[2px_0_10px_rgba(0,0,0,0.05)] w-64">{t('name')}</th>
+                <th className="p-4 text-right">€/Unit</th>
+                <th className="p-4 text-center">Start</th>
+                <th className="p-4 text-center bg-green-50/30 dark:bg-green-900/10">Supplies</th>
+                <th className="p-4 text-center bg-blue-50/30 dark:bg-blue-900/10" colSpan={5}>Weekly Issues (Crew)</th>
+                <th className="p-4 text-center font-bold text-slate-900 dark:text-white">Current</th>
+                <th className="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+              {CATEGORIES.map(cat => {
+                const items = products.filter(p => p.category === cat);
+                if (!items.length) return null;
+                return (
+                  <React.Fragment key={cat}>
+                    <tr className="bg-slate-50/50 dark:bg-slate-800/30"><td colSpan={11} className="px-4 py-2 text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{cat}</td></tr>
+                    {items.map(p => {
+                      const stats = getProductStats(p);
+                      return (
+                        <tr key={p.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                          <td className="p-4 sticky left-0 bg-white dark:bg-slate-800 group-hover:bg-inherit z-10 shadow-[2px_0_10px_rgba(0,0,0,0.02)]">
+                             <div className="font-bold text-slate-800 dark:text-slate-200">{p.name}</div>
+                             <div className="text-[10px] text-slate-400 font-bold uppercase">{p.unitType} × {p.packSize}</div>
+                          </td>
+                          <td className="p-4 text-right font-mono font-bold text-slate-600">€{p.price.toFixed(2)}</td>
+                          <td className="p-4 text-center font-bold text-slate-500">{p.initialStock}</td>
+                          <td className="p-4 text-center bg-green-50/20 dark:bg-green-900/5">
+                             <div className="flex gap-2 justify-center text-[11px] font-bold">
+                                {p.addedStock1 > 0 && <span className="text-green-600">+{p.addedStock1}</span>}
+                                {p.addedStock2 > 0 && <span className="text-green-600">+{p.addedStock2}</span>}
+                                {p.addedStock3 > 0 && <span className="text-green-600">+{p.addedStock3}</span>}
+                                {!p.addedStock1 && !p.addedStock2 && !p.addedStock3 && <span className="text-slate-300">-</span>}
+                             </div>
+                          </td>
+                          {stats.weekly.map((qty, idx) => (
+                             <td key={idx} className="p-4 text-center text-xs font-bold text-slate-400 bg-blue-50/10 dark:bg-blue-900/5">{qty > 0 ? qty : '-'}</td>
+                          ))}
+                          <td className="p-4 text-center"><div className={`inline-block px-3 py-1 rounded-full font-black text-sm ${stats.current < 5 ? 'bg-red-100 text-red-700' : 'bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-white'}`}>{stats.current}</div></td>
+                          <td className="p-4 text-right">
+                             <div className="flex justify-end gap-2">
+                                <button onClick={() => startEdit(p)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => setProducts(products.filter(item => item.id !== p.id))} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                             </div>
                           </td>
                         </tr>
-                        
-                        {categoryProducts.map(product => {
-                          const { crewOut, repOut, currentStock, weeklyCrewOut } = getProductStats(product);
-                          return (
-                            <tr key={product.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm transition-colors">
-                              <td className="p-3 font-medium text-slate-800 dark:text-slate-200">
-                                {product.name}
-                                <span className="ml-2 text-[10px] text-slate-400 font-normal uppercase">({product.packSize || 1}{product.unitType || 'pcs'})</span>
-                              </td>
-                              <td className="p-3 text-slate-800 dark:text-slate-300 text-right font-mono">{product.price.toFixed(3)}</td>
-                              <td className="p-3 text-slate-600 dark:text-slate-400 text-center">{product.initialStock}</td>
-                              
-                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/20 dark:bg-green-900/5">{product.addedStock1 > 0 ? `+${product.addedStock1}` : '-'}</td>
-                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/20 dark:bg-green-900/5">{product.addedStock2 > 0 ? `+${product.addedStock2}` : '-'}</td>
-                              <td className="p-3 text-center text-green-600 dark:text-green-400 bg-green-50/20 dark:bg-green-900/5">{product.addedStock3 > 0 ? `+${product.addedStock3}` : '-'}</td>
-                              
-                              {weeklyCrewOut.map((qty, idx) => (
-                                <td key={idx} className="p-3 text-center text-slate-400 text-xs bg-blue-50/10 dark:bg-blue-900/5">{qty > 0 ? qty : '-'}</td>
-                              ))}
-
-                              <td className="p-3 text-slate-700 dark:text-slate-200 text-center bg-blue-50/30 dark:bg-blue-900/10 font-medium">{crewOut}</td>
-                              <td className="p-3 text-slate-600 dark:text-slate-300 text-center bg-purple-50/30 dark:bg-purple-900/10">{repOut}</td>
-                              
-                              <td className="p-3 text-slate-800 dark:text-white text-center bg-slate-100 dark:bg-slate-900/40 font-bold">{currentStock}</td>
-                              <td className="p-3 flex justify-end gap-2">
-                                <button onClick={() => startEdit(product)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full">
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => handleDelete(product.id)} className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full">
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </React.Fragment>
-                    );
-                  })}
-               </React.Fragment>
-            )}
-          </tbody>
-          <tfoot className="bg-slate-200 dark:bg-slate-900 border-t-2 border-slate-300 dark:border-slate-600 sticky bottom-0 shadow-inner">
-             <tr className="font-bold text-[10px] text-slate-800 dark:text-slate-200 uppercase tracking-tighter">
-               <td className="p-3 text-right" colSpan={2}>{t('total_value')}</td>
-               <td className="p-3 text-center font-mono">€{totals.tInitial.toFixed(2)}</td>
-               <td className="p-3 text-center font-mono text-green-700 dark:text-green-400">€{totals.tS1.toFixed(2)}</td>
-               <td className="p-3 text-center font-mono text-green-700 dark:text-green-400">€{totals.tS2.toFixed(2)}</td>
-               <td className="p-3 text-center font-mono text-green-700 dark:text-green-400">€{totals.tS3.toFixed(2)}</td>
-               {totals.tWeeklyCrew.map((val, idx) => (
-                 <td key={idx} className="p-3 text-center font-mono text-blue-600/70 dark:text-blue-400/50">€{val.toFixed(2)}</td>
-               ))}
-               <td className="p-3 text-center font-mono text-blue-700 dark:text-blue-400">€{totals.tCrewOut.toFixed(2)}</td>
-               <td className="p-3 text-center font-mono text-purple-700 dark:text-purple-400">€{totals.tRepOut.toFixed(2)}</td>
-               <td className="p-3 text-center font-mono text-slate-800 dark:text-slate-200 text-xs">€{totals.tCurrent.toFixed(2)}</td>
-               <td className="p-3"></td>
-             </tr>
-          </tfoot>
-        </table>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
