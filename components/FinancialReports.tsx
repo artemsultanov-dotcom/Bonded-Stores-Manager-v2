@@ -24,6 +24,8 @@ const CATEGORIES = ['Cigarettes', 'Soft Drinks', 'Water', 'Snacks', 'Other'];
 
 const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20];
 
+const LOGO_URL = 'https://www.cldn.com/sites/default/files/CLdN_Logo_worldwide_logistiscs_specialist-.jpg';
+
 export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, products, transactions, settings, updateTransaction, t }) => {
   const [activeTab, setActiveTab] = useState<'PAYROLL' | 'INVENTORY' | 'HISTORY' | 'MONTHLY' | 'REPRESENTATION' | 'ORDER_SHEET'>('PAYROLL');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -32,11 +34,9 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
   const [orderHeaderFontSize, setOrderHeaderFontSize] = useState(10);
   const [historyRecipientFilter, setHistoryRecipientFilter] = useState<string>('ALL');
   
-  // Editing State
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [selectedProductIdToAdd, setSelectedProductIdToAdd] = useState<string>('');
 
-  // Filter transactions by global month settings
   const filteredTransactions = transactions.filter(t => {
     const d = new Date(t.timestamp);
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -65,7 +65,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     window.print();
   };
 
-  // Helper for File System Access API
   const savePDF = async (doc: jsPDF, filename: string) => {
     if ('showSaveFilePicker' in window) {
       try {
@@ -90,27 +89,16 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     }
   };
 
-  // Helper to determine week of month (1-5)
   const getWeekOfMonth = (timestamp: number) => {
     const date = new Date(timestamp);
     const day = date.getDate();
     return Math.min(Math.ceil(day / 7), 5);
   };
 
-  // --- Transaction Editing Logic ---
-  const handleEditClick = (t: Transaction) => {
-    setEditingTransaction(JSON.parse(JSON.stringify(t)));
-    setSelectedProductIdToAdd('');
-  };
-
   const handleEditQuantity = (index: number, newQty: number) => {
     if (!editingTransaction) return;
     const updatedItems = [...editingTransaction.items];
-    if (newQty <= 0) {
-      updatedItems[index].quantity = 0;
-    } else {
-      updatedItems[index].quantity = newQty;
-    }
+    updatedItems[index].quantity = Math.max(0, newQty);
     setEditingTransaction({ ...editingTransaction, items: updatedItems });
   };
 
@@ -124,7 +112,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     if (!editingTransaction || !selectedProductIdToAdd) return;
     const product = products.find(p => p.id === selectedProductIdToAdd);
     if (!product) return;
-
     const existingIndex = editingTransaction.items.findIndex(i => i.productId === product.id);
     if (existingIndex > -1) {
       const updatedItems = [...editingTransaction.items];
@@ -162,7 +149,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     }
   };
 
-  // --- Sorting Logic used for Payroll and Filter Dropdown ---
   const sortedCrew = [...crew].sort((a, b) => {
     if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
     const rankIndexA = RANKS.indexOf(a.rank);
@@ -173,7 +159,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     return a.name.localeCompare(b.name);
   });
 
-  // --- Payroll Logic ---
   const payrollData = sortedCrew.map(member => {
     const memberTransactions = filteredTransactions.filter(
       t => t.type === TransactionType.CREW && t.recipientId === member.id
@@ -192,7 +177,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
   const totalDeductionUSD = usdCrew.reduce((sum, p) => sum + p.finalDeduction, 0);
   const grandTotalEUR = payrollData.reduce((sum, p) => sum + p.totalDeductionEUR, 0);
 
-  // --- Inventory Logic ---
   const inventoryReport = products.map(product => {
     const soldToCrew = filteredTransactions
       .filter(t => t.type === TransactionType.CREW)
@@ -212,7 +196,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     return { ...product, totalAdded, soldToCrew, givenToReps, totalOut, finalStock };
   });
 
-  // --- Monthly Report Calculations ---
   const monthlyReportData = CATEGORIES.map(category => {
     const categoryProducts = products.filter(p => p.category === category);
     if (categoryProducts.length === 0) return null;
@@ -255,7 +238,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     return acc;
   }, { valInitial: 0, valSupply1: 0, valSupply2: 0, valSupply3: 0, valTotalSupply: 0, crewVal: 0, chartVal: 0, ownVal: 0, valConsumption: 0, valEnding: 0 });
 
-  // --- Representation Report Logic ---
   const repReportData = CATEGORIES.map(category => {
     const categoryProducts = products.filter(p => p.category === category);
     if (categoryProducts.length === 0) return null;
@@ -291,7 +273,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     return acc;
   }, { chartVal: 0, ownVal: 0 });
 
-  // --- History Filtered Logic ---
   const sortedHistory = [...filteredTransactions]
     .filter(tr => {
       if (historyRecipientFilter === 'ALL') return true;
@@ -303,7 +284,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
       return b.timestamp - a.timestamp;
     });
 
-  // --- PDF Export Logic ---
   const generateHeader = (doc: jsPDF, title: string) => {
     doc.setFontSize(14); doc.text(settings.vesselName, 14, 15);
     doc.setFontSize(10); doc.text(`${t('master')}: ${settings.masterName}`, 14, 20);
@@ -354,7 +334,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
       : historyRecipientFilter === 'REPRESENTATION' 
         ? ` - ${t('representation')}` 
         : ` - ${crew.find(c => c.id === historyRecipientFilter)?.name || ''}`;
-    
     generateHeader(doc, t('history_title') + filterLabel);
     const tableColumn = [t('col_date'), t('col_recipient'), t('category'), t('col_items'), t('col_amount')];
     const tableRows = sortedHistory.map(tr => [formatDate(tr.timestamp), tr.recipientName, tr.type === TransactionType.CREW ? t('crew') : t('representation'), tr.items.map(i => `${i.productName} (${i.quantity})`).join(', '), `EUR ${tr.totalAmount.toFixed(2)}`]);
@@ -365,53 +344,224 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
   const exportMonthlyReportPDF = async () => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const pageWidth = doc.internal.pageSize.getWidth();
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text(settings.vesselName, 10, 15);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`${t('master')}: ${settings.masterName}`, 10, 21);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text(t('monthly_title'), pageWidth / 2, 15, { align: "center" });
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`${t('period')}: ${monthLabel}`, pageWidth / 2, 21, { align: "center" });
-    doc.setFontSize(11); doc.text(formatDate(new Date()), pageWidth - 10, 15, { align: "right" });
     
-    const head: any[] = [[ { content: t('col_product'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_unit'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_units_pack'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_price_pack'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_price_unit'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('initial_stock'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_supply'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_cons_crew'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_cons_chart'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_cons_owner'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_consumption'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, { content: t('col_ending'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }], [ { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }]];
+    try {
+      doc.addImage(LOGO_URL, 'JPEG', 14, 5, 40, 10);
+    } catch (e) {
+      console.warn("Could not load logo in PDF", e);
+    }
+
+    doc.setFont("helvetica", "bold"); 
+    doc.setFontSize(14); 
+    doc.text(t('monthly_title'), pageWidth / 2, 15, { align: "center" });
+    
+    const head: any[] = [
+      [
+        { content: settings.vesselName, colSpan: 7, styles: { halign: 'left' as any, fontStyle: 'bold' as any, fontSize: 10, lineWidth: 0 } },
+        { content: `${t('period')}: ${monthLabel}`, colSpan: 7, styles: { halign: 'right' as any, fontStyle: 'bold' as any, fontSize: 10, lineWidth: 0 } }
+      ],
+      [ 
+        { content: t('col_product'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('col_unit'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('col_price_unit'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('initial_stock'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('col_supply'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('col_cons_crew'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('col_cons_chart'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('col_cons_owner'), rowSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('col_consumption'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }, 
+        { content: t('col_ending'), colSpan: 2, styles: { halign: 'center' as any, valign: 'middle' as any } }
+      ], 
+      [ 
+        { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, 
+        { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, 
+        { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, 
+        { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }
+      ]
+    ];
+    
     const body: any[] = [];
+    const qtyFillColor = [255, 255, 204];
+
     monthlyReportData.forEach(group => {
        if(!group) return; 
-       body.push([{ content: group.category, colSpan: 19, styles: { fontStyle: 'bold' as any, fillColor: [240, 240, 240] } }]);
-       group.items.forEach(item => { body.push([ item.name, item.unitType, item.packSize, item.pricePerPack.toFixed(1), item.pricePerUnit.toFixed(1), item.initialStock, item.valInitial.toFixed(1), item.totalSupply || '', item.valTotalSupply > 0 ? item.valTotalSupply.toFixed(1) : '', item.crewQty || '', item.crewVal > 0 ? item.crewVal.toFixed(1) : '', item.chartQty || '', item.chartVal > 0 ? item.chartVal.toFixed(1) : '', item.ownQty || '', item.ownVal > 0 ? item.ownVal.toFixed(1) : '', item.totalConsumption || '', item.valConsumption > 0 ? item.valConsumption.toFixed(1) : '', item.endingStock, item.valEnding.toFixed(1) ]); });
+       body.push([{ content: group.category, colSpan: 14, styles: { fontStyle: 'bold' as any, fillColor: [221, 235, 247] } }]);
+       group.items.forEach(item => { 
+          body.push([ 
+            item.name, item.unitType, item.pricePerUnit.toFixed(1) + ' €', 
+            { content: item.initialStock, styles: { fillColor: qtyFillColor } }, item.valInitial.toFixed(1) + ' €', 
+            { content: item.totalSupply || '', styles: { fillColor: qtyFillColor } }, item.valTotalSupply > 0 ? item.valTotalSupply.toFixed(1) + ' €' : '', 
+            { content: item.crewQty || '', styles: { fillColor: qtyFillColor } }, { content: item.chartQty || '', styles: { fillColor: qtyFillColor } }, { content: item.ownQty || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.totalConsumption || '', styles: { fillColor: qtyFillColor } }, item.valConsumption > 0 ? item.valConsumption.toFixed(1) + ' €' : '', 
+            { content: item.endingStock, styles: { fillColor: qtyFillColor } }, item.valEnding.toFixed(1) + ' €' 
+          ]);
+       });
     });
-    body.push([{ content: t('total').toUpperCase(), colSpan: 5, styles: { fontStyle: 'bold' as any, halign: 'right' as any } }, '', monthlyTotals.valInitial.toFixed(1), '', monthlyTotals.valTotalSupply.toFixed(1), '', monthlyTotals.crewVal.toFixed(1), '', monthlyTotals.chartVal.toFixed(1), '', monthlyTotals.ownVal.toFixed(1), '', monthlyTotals.valConsumption.toFixed(1), '', monthlyTotals.valEnding.toFixed(1)]);
+
+    body.push([
+      { content: t('total').toUpperCase(), colSpan: 3, styles: { fontStyle: 'bold' as any, halign: 'left' as any, fillColor: [221, 235, 247] } }, 
+      { content: '', styles: { fillColor: [221, 235, 247] } }, { content: monthlyTotals.valInitial.toFixed(1) + ' €', styles: { fillColor: [221, 235, 247], fontStyle: 'bold' } }, 
+      { content: '', styles: { fillColor: [221, 235, 247] } }, { content: monthlyTotals.valTotalSupply.toFixed(1) + ' €', styles: { fillColor: [221, 235, 247], fontStyle: 'bold' } }, 
+      { content: '', styles: { fillColor: [221, 235, 247] } }, { content: '', styles: { fillColor: [221, 235, 247] } }, { content: '', styles: { fillColor: [221, 235, 247] } }, 
+      { content: '', styles: { fillColor: [221, 235, 247] } }, { content: monthlyTotals.valConsumption.toFixed(1) + ' €', styles: { fillColor: [221, 235, 247], fontStyle: 'bold' } }, 
+      { content: '', styles: { fillColor: [221, 235, 247] } }, { content: monthlyTotals.valEnding.toFixed(1) + ' €', styles: { fillColor: [221, 235, 247], fontStyle: 'bold' } }
+    ]);
     
-    autoTable(doc, { head: head, body: body, startY: 30, styles: { fontSize: 8, cellPadding: 1, overflow: 'linebreak' }, columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 8, halign: 'center' }, 2: { cellWidth: 8, halign: 'center' }, 3: { cellWidth: 10, halign: 'right' }, 4: { cellWidth: 10, halign: 'right' }, 5: { halign: 'center', cellWidth: 8 }, 6: { halign: 'right' }, 7: { halign: 'center', cellWidth: 8 }, 8: { halign: 'right' }, 9: { halign: 'center', cellWidth: 8 }, 10: { halign: 'right' }, 11: { halign: 'center', cellWidth: 8 }, 12: { halign: 'right' }, 13: { halign: 'center', cellWidth: 8 }, 14: { halign: 'right' }, 15: { halign: 'center', cellWidth: 8 }, 16: { halign: 'right' }, 17: { halign: 'center', cellWidth: 8 }, 18: { halign: 'right' } }, theme: 'grid', headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], lineColor: [255, 255, 255], lineWidth: 0.1, fontStyle: 'normal' } });
+    autoTable(doc, { 
+      head: head, body: body, startY: 25, theme: 'grid', 
+      styles: { fontSize: 10, cellPadding: 1, overflow: 'linebreak' }, 
+      columnStyles: { 0: { cellWidth: 50 }, 1: { cellWidth: 20, halign: 'center' }, 2: { cellWidth: 20, halign: 'center' }, 3: { halign: 'center', cellWidth: 15 }, 4: { halign: 'center', cellWidth: 20 }, 5: { halign: 'center', cellWidth: 15 }, 6: { halign: 'center', cellWidth: 20 }, 7: { halign: 'center', cellWidth: 15 }, 8: { halign: 'center', cellWidth: 15 }, 9: { halign: 'center', cellWidth: 15 }, 10: { halign: 'center', cellWidth: 15 }, 11: { halign: 'center', cellWidth: 20 }, 12: { halign: 'center', cellWidth: 15 }, 13: { halign: 'center', cellWidth: 20 } }, 
+      headStyles: { fillColor: [0, 32, 96], textColor: [255, 255, 255], lineColor: [255, 255, 255], lineWidth: 0.2, fontStyle: 'normal' },
+      bodyStyles: { lineColor: [0, 0, 0], lineWidth: 0.2 }  
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 25;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let sigY = finalY;
+    if (sigY + 20 > pageHeight) { doc.addPage(); sigY = 30; }
+    doc.setFontSize(10); doc.setFont("helvetica", "normal");
+    doc.line(20, sigY, 100, sigY); doc.text(t('master'), 20, sigY + 5);
+    doc.setFont("helvetica", "bold"); doc.text(settings.masterName, 20, sigY + 10);
+
     await savePDF(doc, `MonthlyReport_${settings.reportYear}_${settings.reportMonth}.pdf`);
   };
 
   const exportRepresentationPDF = async () => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const pageWidth = doc.internal.pageSize.getWidth();
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text(settings.vesselName, 10, 15);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`${t('master')}: ${settings.masterName}`, 10, 21);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text(t('rep_title'), pageWidth / 2, 15, { align: "center" });
-    doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`${t('period')}: ${monthLabel}`, pageWidth / 2, 21, { align: "center" });
-    doc.setFontSize(11); doc.text(formatDate(new Date()), pageWidth - 10, 15, { align: "right" });
     
-    const head: any[] = [[ { content: "", colSpan: 4, styles: { halign: 'center' as any, valign: 'middle' as any, fontSize: 12, fontStyle: 'bold' as any } }, { content: t('rep_charterers_full'), colSpan: 7, styles: { halign: 'center' as any, valign: 'middle' as any, fontStyle: 'bold' as any } }, { content: t('rep_owners_full'), colSpan: 7, styles: { halign: 'center' as any, valign: 'middle' as any, fontStyle: 'bold' as any } } ], [ { content: t('col_product'), styles: { halign: 'center' as any } }, { content: t('col_unit'), styles: { halign: 'center' as any } }, { content: t('col_price_plain'), styles: { halign: 'center' as any } }, { content: t('current_stock'), styles: { halign: 'center' as any } }, { content: t('wk1'), styles: { halign: 'center' as any } }, { content: t('wk2'), styles: { halign: 'center' as any } }, { content: t('wk3'), styles: { halign: 'center' as any } }, { content: t('wk4'), styles: { halign: 'center' as any } }, { content: t('wk5'), styles: { halign: 'center' as any } }, { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } }, { content: t('wk1'), styles: { halign: 'center' as any } }, { content: t('wk2'), styles: { halign: 'center' as any } }, { content: t('wk3'), styles: { halign: 'center' as any } }, { content: t('wk4'), styles: { halign: 'center' as any } }, { content: t('wk5'), styles: { halign: 'center' as any } }, { content: t('col_qty'), styles: { halign: 'center' as any } }, { content: t('col_value'), styles: { halign: 'center' as any } } ]];
+
+    // Title (matching Monthly Report)
+    doc.setFont("helvetica", "bold"); 
+    doc.setFontSize(14); 
+    doc.text(t('rep_title'), pageWidth / 2, 15, { align: "center" });
+    
+    const head: any[] = [
+      [
+        { content: settings.vesselName, colSpan: 9, styles: { halign: 'left' as any, fontStyle: 'bold' as any, fontSize: 10, lineWidth: 0 } },
+        { content: `${t('period')}: ${monthLabel}`, colSpan: 9, styles: { halign: 'right' as any, fontStyle: 'bold' as any, fontSize: 10, lineWidth: 0 } }
+      ],
+      [ 
+        { content: "", colSpan: 4, styles: { halign: 'center' as any, valign: 'middle' as any, fontSize: 12, fontStyle: 'bold' as any, lineWidth: 0 } }, 
+        { content: t('rep_charterers_full'), colSpan: 7, styles: { halign: 'center' as any, valign: 'middle' as any, fontStyle: 'bold' as any } }, 
+        { content: t('rep_owners_full'), colSpan: 7, styles: { halign: 'center' as any, valign: 'middle' as any, fontStyle: 'bold' as any } } 
+      ], 
+      [ 
+        { content: t('col_product'), styles: { halign: 'center' as any } }, 
+        { content: t('col_unit'), styles: { halign: 'center' as any } }, 
+        { content: t('col_price_plain'), styles: { halign: 'center' as any } }, 
+        { content: t('current_stock'), styles: { halign: 'center' as any } }, 
+        { content: t('wk1'), styles: { halign: 'right' as any } }, 
+        { content: t('wk2'), styles: { halign: 'center' as any } }, 
+        { content: t('wk3'), styles: { halign: 'center' as any } }, 
+        { content: t('wk4'), styles: { halign: 'center' as any } }, 
+        { content: t('wk5'), styles: { halign: 'center' as any } }, 
+        { content: t('col_qty'), styles: { halign: 'center' as any } }, 
+        { content: t('col_value'), styles: { halign: 'center' as any } }, 
+        { content: t('wk1'), styles: { halign: 'center' as any } }, 
+        { content: t('wk2'), styles: { halign: 'center' as any } }, 
+        { content: t('wk3'), styles: { halign: 'center' as any } }, 
+        { content: t('wk4'), styles: { halign: 'center' as any } }, 
+        { content: t('wk5'), styles: { halign: 'center' as any } }, 
+        { content: t('col_qty'), styles: { halign: 'center' as any } }, 
+        { content: t('col_value'), styles: { halign: 'center' as any } } 
+      ]
+    ];
+    
     const body: any[] = [];
+    const qtyFillColor = [255, 255, 204]; // #ffffcc
+
     repReportData.forEach(group => {
        if(!group) return;
-       body.push([{ content: group.category, colSpan: 18, styles: { fontStyle: 'bold' as any, fillColor: [30, 58, 138], textColor: [255, 255, 255] } }]);
-       group.items.forEach(item => { body.push([ item.name, item.unitType, item.price.toFixed(2) + ' €', item.currentStock, item.chartWeeks[0] || '', item.chartWeeks[1] || '', item.chartWeeks[2] || '', item.chartWeeks[3] || '', item.chartWeeks[4] || '', item.chartQty || '', item.chartVal > 0 ? item.chartVal.toFixed(2) + ' €' : '-', item.ownWeeks[0] || '', item.ownWeeks[1] || '', item.ownWeeks[2] || '', item.ownWeeks[3] || '', item.ownWeeks[4] || '', item.ownQty || '', item.ownVal > 0 ? item.ownVal.toFixed(2) + ' €' : '-' ]); });
+       // Category row color matching Monthly Report
+       body.push([{ content: group.category, colSpan: 18, styles: { fontStyle: 'bold' as any, fillColor: [221, 235, 247], textColor: [0, 0, 0] } }]);
+       group.items.forEach(item => { 
+          body.push([ 
+            item.name, 
+            item.unitType, 
+            item.price.toFixed(2) + ' €', 
+            item.currentStock, 
+            { content: item.chartWeeks[0] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.chartWeeks[1] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.chartWeeks[2] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.chartWeeks[3] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.chartWeeks[4] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.chartQty || '', styles: { ffillColor: [255, 255, 255] } }, 
+            item.chartVal > 0 ? item.chartVal.toFixed(2) + ' €' : '-', 
+            { content: item.ownWeeks[0] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.ownWeeks[1] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.ownWeeks[2] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.ownWeeks[3] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.ownWeeks[4] || '', styles: { fillColor: qtyFillColor } }, 
+            { content: item.ownQty || '', styles: { ffillColor: [255, 255, 255] } }, 
+            item.ownVal > 0 ? item.ownVal.toFixed(2) + ' €' : '-' 
+          ]); 
+       });
     });
-    body.push([ { content: t('total').toUpperCase(), colSpan: 4, styles: { fontStyle: 'bold' as any, halign: 'right' as any } }, { content: '', colSpan: 5 }, { content: '', styles: { halign: 'center' as any } }, { content: repTotals.chartVal.toFixed(2) + ' €', styles: { fontStyle: 'bold' as any, halign: 'right' as any } }, { content: '', colSpan: 5 }, { content: '', styles: { halign: 'center' as any } }, { content: repTotals.ownVal.toFixed(2) + ' €', styles: { fontStyle: 'bold' as any, halign: 'right' as any } } ]);
     
-    autoTable(doc, { head: head, body: body, startY: 30, styles: { fontSize: 8, cellPadding: 1 }, theme: 'grid', headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], lineColor: [255, 255, 255], lineWidth: 0.1, fontStyle: 'normal' }, columnStyles: { 0: { cellWidth: 40 } } });
+    // Total Row color matching Monthly Report
+    body.push([ 
+      { content: t('total').toUpperCase(), colSpan: 4, styles: { fontStyle: 'bold' as any, halign: 'right' as any, fillColor: [221, 235, 247] } }, 
+      { content: '', colSpan: 5, styles: { fillColor: [221, 235, 247] } }, 
+      { content: '', styles: { halign: 'center' as any, fillColor: [221, 235, 247] } }, 
+      { content: repTotals.chartVal.toFixed(2) + ' €', styles: { fontStyle: 'bold' as any, halign: 'right' as any, fillColor: [221, 235, 247] } }, 
+      { content: '', colSpan: 5, styles: { fillColor: [221, 235, 247] } }, 
+      { content: '', styles: { halign: 'center' as any, fillColor: [221, 235, 247] } }, 
+      { content: repTotals.ownVal.toFixed(2) + ' €', styles: { fontStyle: 'bold' as any, halign: 'right' as any, fillColor: [221, 235, 247] } } 
+    ]);
+    
+    autoTable(doc, { 
+      head: head, 
+      body: body, 
+      startY: 25, 
+      styles: { fontSize: 10, cellPadding: 1, overflow: 'linebreak' }, 
+      theme: 'grid', 
+      headStyles: { fillColor: [0, 32, 96], textColor: [255, 255, 255], lineColor: [255, 255, 255], lineWidth: 0.2, fontStyle: 'normal' }, 
+      bodyStyles: { lineColor: [0, 0, 0], lineWidth: 0.2 },
+      columnStyles: { 
+        0: { cellWidth: 60, halign: 'left' }, 
+        1: { cellWidth: 18, halign: 'center' }, 
+        2: { cellWidth: 18, halign: 'center' }, 
+        3: { cellWidth: 18, halign: 'center' }, 
+        4: { cellWidth: 10, halign: 'center' }, 
+        5: { cellWidth: 10, halign: 'center' }, 
+        6: { cellWidth: 10, halign: 'center' }, 
+        7: { cellWidth: 10, halign: 'center' }, 
+        8: { cellWidth: 10, halign: 'center' }, 
+        9: { cellWidth: 10, halign: 'center' }, 
+        10: { cellWidth: 20, halign: 'center' },
+        11: { cellWidth: 10, halign: 'center' }, 
+        12: { cellWidth: 10, halign: 'center' }, 
+        13: { cellWidth: 10, halign: 'center' }, 
+        14: { cellWidth: 10, halign: 'center' }, 
+        15: { cellWidth: 10, halign: 'center' },
+        16: { cellWidth: 10, halign: 'center' }, 
+        17: { cellWidth: 20, halign: 'center' }
+      } 
+    });
+
+    // Add Signature Section (matching Monthly Report)
+    const finalY = (doc as any).lastAutoTable.finalY + 25;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let sigY = finalY;
+    if (sigY + 20 > pageHeight) { doc.addPage(); sigY = 30; }
+    
+    doc.setFontSize(10); doc.setFont("helvetica", "normal");
+    doc.line(100, sigY, 20, sigY); doc.text(t('master'), 20, sigY + 5);
+    doc.setFont("helvetica", "bold"); doc.text(settings.masterName, 20, sigY + 10);
+   
+
     await savePDF(doc, `Representation_Report_${settings.reportYear}_${settings.reportMonth}.pdf`);
   };
 
   const handleExportPDF = async () => {
-    if (activeTab === 'PAYROLL') await exportPayrollPDF();
-    else if (activeTab === 'INVENTORY') await exportInventoryPDF();
-    else if (activeTab === 'HISTORY') await exportHistoryPDF();
-    else if (activeTab === 'MONTHLY') await exportMonthlyReportPDF();
-    else if (activeTab === 'REPRESENTATION') await exportRepresentationPDF();
+    switch (activeTab) {
+      case 'PAYROLL': await exportPayrollPDF(); break;
+      case 'INVENTORY': await exportInventoryPDF(); break;
+      case 'HISTORY': await exportHistoryPDF(); break;
+      case 'MONTHLY': await exportMonthlyReportPDF(); break;
+      case 'REPRESENTATION': await exportRepresentationPDF(); break;
+    }
   };
 
   const PayrollTableSection = ({ data, currency, total }: { data: typeof payrollData, currency: string, total: number }) => (
@@ -465,6 +615,11 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     </div>
   );
 
+  const handleEditClick = (t: Transaction) => {
+    setEditingTransaction(JSON.parse(JSON.stringify(t)));
+    setSelectedProductIdToAdd('');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in relative">
       {editingTransaction && (
@@ -475,7 +630,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                <button onClick={() => setEditingTransaction(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X className="w-6 h-6" /></button>
              </div>
              
-             {/* Add Product Section in Modal */}
              <div className="bg-slate-50 dark:bg-slate-700/30 p-4 rounded-xl mb-4 border border-slate-100 dark:border-slate-700 flex gap-2 items-end">
                 <div className="flex-1">
                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Add Product to Transaction</label>
@@ -490,11 +644,7 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                       ))}
                    </select>
                 </div>
-                <button 
-                  onClick={handleAddProductToEdit}
-                  disabled={!selectedProductIdToAdd}
-                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white p-2 rounded-lg flex items-center gap-1 text-sm font-bold transition-colors"
-                >
+                <button onClick={handleAddProductToEdit} disabled={!selectedProductIdToAdd} className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white p-2 rounded-lg flex items-center gap-1 text-sm font-bold transition-colors">
                    <Plus className="w-4 h-4" /> {t('add')}
                 </button>
              </div>
@@ -542,28 +692,12 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-2" title="Header Font Size">
                   <Type className="w-4 h-4 text-slate-500 dark:text-slate-300" />
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Header</span>
-                  <select 
-                    value={orderHeaderFontSize} 
-                    onChange={(e) => setOrderHeaderFontSize(parseInt(e.target.value))}
-                    className="bg-transparent outline-none text-sm text-slate-700 dark:text-white font-bold"
-                  >
-                    {FONT_SIZES.map(size => (
-                      <option key={size} value={size}>{size}px</option>
-                    ))}
-                  </select>
+                  <select value={orderHeaderFontSize} onChange={(e) => setOrderHeaderFontSize(parseInt(e.target.value))} className="bg-transparent outline-none text-sm text-slate-700 dark:text-white font-bold">{FONT_SIZES.map(size => (<option key={size} value={size}>{size}px</option>))}</select>
                </div>
                <div className="flex items-center gap-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-2 mr-2" title="Table Font Size">
                   <Type className="w-4 h-4 text-slate-500 dark:text-slate-300" />
                   <span className="text-[10px] text-slate-400 font-bold uppercase">Table</span>
-                  <select 
-                    value={orderTableFontSize} 
-                    onChange={(e) => setOrderTableFontSize(parseInt(e.target.value))}
-                    className="bg-transparent outline-none text-sm text-slate-700 dark:text-white font-bold"
-                  >
-                    {FONT_SIZES.map(size => (
-                      <option key={size} value={size}>{size}px</option>
-                    ))}
-                  </select>
+                  <select value={orderTableFontSize} onChange={(e) => setOrderTableFontSize(parseInt(e.target.value))} className="bg-transparent outline-none text-sm text-slate-700 dark:text-white font-bold">{FONT_SIZES.map(size => (<option key={size} value={size}>{size}px</option>))}</select>
                </div>
                <button onClick={handlePrint} className="bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 px-4 py-3 rounded-xl flex items-center gap-2 text-sm font-bold transition-all shadow-sm hover:scale-105 active:scale-95 border border-slate-200 dark:border-slate-600"><Printer className="w-5 h-5" /> {t('print')}</button>
              </>
@@ -605,44 +739,42 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                        <tr className="border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
                           <th className="p-3 font-semibold uppercase tracking-wider w-[180px]" rowSpan={2}>{t('col_product')}</th>
                           <th className="p-2 text-center font-normal" rowSpan={2}>{t('col_unit')}</th>
-                          <th className="p-2 text-center font-normal" rowSpan={2}>{t('col_units_pack')}</th>
-                          <th className="p-2 text-right font-normal" rowSpan={2}>{t('col_price_pack')}</th>
                           <th className="p-2 text-right font-normal border-r border-slate-100 dark:border-slate-800" rowSpan={2}>{t('col_price_unit')}</th>
                           <th className="p-2 text-center font-semibold uppercase tracking-wider border-r border-slate-100 dark:border-slate-800" colSpan={2}>{t('initial_stock')}</th>
                           <th className="p-2 text-center font-semibold uppercase tracking-wider border-r border-slate-100 dark:border-slate-800 bg-green-50/30 dark:bg-green-900/10" colSpan={2}>{t('col_supply')}</th>
-                          <th className="p-2 text-center font-semibold uppercase tracking-wider border-r border-slate-100 dark:border-slate-800 bg-blue-50/30 dark:bg-blue-900/10" colSpan={2}>{t('col_cons_crew')}</th>
-                          <th className="p-2 text-center font-semibold uppercase tracking-wider border-r border-slate-100 dark:border-slate-800 bg-orange-50/30 dark:bg-orange-900/10" colSpan={2}>{t('col_cons_chart')}</th>
-                          <th className="p-2 text-center font-semibold uppercase tracking-wider border-r border-slate-100 dark:border-slate-800 bg-cyan-50/30 dark:bg-cyan-900/10" colSpan={2}>{t('col_cons_owner')}</th>
-                          <th className="p-2 text-center font-semibold uppercase tracking-wider border-r border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800" colSpan={2}>{t('col_consumption')}</th>
-                          <th className="p-2 text-center font-semibold uppercase tracking-wider" colSpan={2}>{t('col_ending')}</th>
+                          <th className="p-2 text-center font-semibold uppercase tracking-wider bg-blue-50/30 dark:bg-blue-900/10" rowSpan={2}>{t('col_cons_crew')}</th>
+                          <th className="p-2 text-center font-semibold uppercase tracking-wider bg-orange-50/30 dark:bg-orange-900/10" rowSpan={2}>{t('col_cons_chart')}</th>
+                          <th className="p-2 text-center font-semibold uppercase tracking-wider bg-cyan-50/30 dark:bg-cyan-900/10" rowSpan={2}>{t('col_cons_owner')}</th>
+                          <th className="p-2 text-center font-semibold uppercase tracking-wider border-l border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800" colSpan={2}>{t('col_consumption')}</th>
+                          <th className="p-2 text-center font-semibold uppercase tracking-wider border-l border-slate-100 dark:border-slate-800" colSpan={2}>{t('col_ending')}</th>
                        </tr>
                        <tr className="border-b border-slate-200 dark:border-slate-700 text-[10px] text-slate-400 uppercase">
                           <th className="pb-2 text-center font-normal">{t('col_qty')}</th><th className="pb-2 text-center font-normal border-r border-slate-100 dark:border-slate-800">{t('col_value')}</th>
                           <th className="pb-2 text-center font-normal bg-green-50/30 dark:bg-green-900/10">{t('col_qty')}</th><th className="pb-2 text-center font-normal border-r border-slate-100 dark:border-slate-800 bg-green-50/30 dark:bg-green-900/10">{t('col_value')}</th>
-                          <th className="pb-2 text-center font-normal bg-blue-50/30 dark:bg-blue-900/10">{t('col_qty')}</th><th className="pb-2 text-center font-normal border-r border-slate-100 dark:border-slate-800 bg-blue-50/30 dark:bg-blue-900/10">{t('col_value')}</th>
-                          <th className="pb-2 text-center font-normal bg-orange-50/30 dark:bg-orange-900/10">{t('col_qty')}</th><th className="pb-2 text-center font-normal border-r border-slate-100 dark:border-slate-800 bg-orange-50/30 dark:bg-orange-900/10">{t('col_value')}</th>
-                          <th className="pb-2 text-center font-normal bg-cyan-50/30 dark:bg-cyan-900/10">{t('col_qty')}</th><th className="pb-2 text-center font-normal border-r border-slate-100 dark:border-slate-800 bg-cyan-50/30 dark:bg-cyan-900/10">{t('col_value')}</th>
-                          <th className="pb-2 text-center font-normal bg-slate-100 dark:bg-slate-800">{t('col_qty')}</th><th className="pb-2 text-center font-normal border-r border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">{t('col_value')}</th>
-                          <th className="pb-2 text-center font-normal">{t('col_qty')}</th><th className="pb-2 text-center font-normal">{t('col_value')}</th>
+                          <th className="pb-2 text-center font-normal border-l border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">{t('col_qty')}</th><th className="pb-2 text-center font-normal border-r border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">{t('col_value')}</th>
+                          <th className="pb-2 text-center font-normal border-l border-slate-100 dark:border-slate-800">{t('col_qty')}</th><th className="pb-2 text-center font-normal">{t('col_value')}</th>
                        </tr>
                     </thead>
                     <tbody>
                        {monthlyReportData.map(group => (
                          <React.Fragment key={group.category}>
-                           <tr className="bg-slate-50 dark:bg-slate-800/50"><td colSpan={19} className="py-2 px-3 font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest text-[10px]">{t(`cat_${group.category.toLowerCase().replace(/ /g, '_')}`) || group.category}</td></tr>
+                           <tr className="bg-slate-50 dark:bg-slate-800/50"><td colSpan={14} className="py-2 px-3 font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest text-[10px]">{t(`cat_${group.category.toLowerCase().replace(/ /g, '_')}`) || group.category}</td></tr>
                            {group.items.map(item => (
                              <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 last:border-0 text-xs transition-colors">
                                 <td className="py-2 px-3 font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">{item.name}</td>
-                                <td className="py-2 text-center text-slate-500">{item.unitType}</td><td className="py-2 text-center text-slate-500">{item.packSize}</td>
-                                <td className="py-2 text-right text-slate-600 dark:text-slate-400 tabular-nums">{item.pricePerPack.toFixed(1)}</td>
-                                <td className="py-2 text-right text-slate-400 tabular-nums border-r border-slate-100 dark:border-slate-800 pr-2">{item.pricePerUnit.toFixed(1)}</td>
-                                <td className="py-2 text-center font-medium text-slate-700 dark:text-slate-300">{item.initialStock}</td><td className="py-2 text-center text-slate-500 tabular-nums border-r border-slate-100 dark:border-slate-800">{item.valInitial.toFixed(1)}</td>
-                                <td className="py-2 text-center text-green-600 dark:text-green-400 bg-green-50/10 dark:bg-green-900/5">{item.totalSupply || ''}</td><td className="py-2 text-center text-green-600/70 dark:text-green-400/70 tabular-nums border-r border-slate-100 dark:border-slate-800 bg-green-50/10 dark:bg-green-900/5">{item.valTotalSupply > 0 ? item.valTotalSupply.toFixed(1) : ''}</td>
-                                <td className="py-2 text-center text-blue-600 dark:text-blue-400 bg-blue-50/10 dark:bg-green-900/5">{item.crewQty || ''}</td><td className="py-2 text-center text-blue-600/70 dark:text-blue-400/70 tabular-nums border-r border-slate-100 dark:border-slate-800 bg-blue-50/10 dark:bg-blue-900/5">{item.crewVal > 0 ? item.crewVal.toFixed(1) : ''}</td>
-                                <td className="py-2 text-center text-orange-600 dark:text-orange-400 bg-orange-50/10 dark:bg-orange-900/5">{item.chartQty || ''}</td><td className="py-2 text-center text-orange-600/70 dark:text-orange-400/70 tabular-nums border-r border-slate-100 dark:border-slate-800 bg-orange-50/10 dark:bg-orange-900/5">{item.chartVal > 0 ? item.chartVal.toFixed(1) : ''}</td>
-                                <td className="py-2 text-center text-cyan-600 dark:text-cyan-400 bg-cyan-50/10 dark:bg-cyan-900/5">{item.ownQty || ''}</td><td className="py-2 text-center text-cyan-600/70 dark:text-cyan-400/70 tabular-nums border-r border-slate-100 dark:border-slate-800 bg-cyan-50/10 dark:bg-cyan-900/5">{item.ownVal > 0 ? item.ownVal.toFixed(1) : ''}</td>
-                                <td className="py-2 text-center font-medium text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/50">{item.totalConsumption || ''}</td><td className="py-2 text-center text-slate-500 tabular-nums border-r border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">{item.valConsumption > 0 ? item.valConsumption.toFixed(1) : ''}</td>
-                                <td className="py-2 text-center font-bold text-slate-800 dark:text-white">{item.endingStock}</td><td className="py-2 text-center font-medium text-slate-800 dark:text-slate-200 tabular-nums">{item.valEnding.toFixed(1)}</td>
+                                <td className="py-2 text-center text-slate-500">{item.unitType}</td>
+                                <td className="py-2 text-right text-slate-400 tabular-nums border-r border-slate-100 dark:border-slate-800 pr-2">{item.pricePerUnit.toFixed(1)} €</td>
+                                <td className="py-2 text-center font-medium text-slate-700 dark:text-slate-300 bg-yellow-50/50 dark:bg-yellow-900/10">{item.initialStock}</td>
+                                <td className="py-2 text-center text-slate-500 tabular-nums border-r border-slate-100 dark:border-slate-800">{item.valInitial.toFixed(1)} €</td>
+                                <td className="py-2 text-center text-green-600 dark:text-green-400 bg-yellow-50/50 dark:bg-yellow-900/10">{item.totalSupply || ''}</td>
+                                <td className="py-2 text-center text-green-600/70 dark:text-green-400/70 tabular-nums border-r border-slate-100 dark:border-slate-800 bg-green-50/10 dark:bg-green-900/5">{item.valTotalSupply > 0 ? item.valTotalSupply.toFixed(1) + ' €' : ''}</td>
+                                <td className="py-2 text-center text-blue-600 dark:text-blue-400 bg-yellow-50/50 dark:bg-yellow-900/10">{item.crewQty || ''}</td>
+                                <td className="py-2 text-center text-orange-600 dark:text-orange-400 bg-yellow-50/50 dark:bg-yellow-900/10">{item.chartQty || ''}</td>
+                                <td className="py-2 text-center text-cyan-600 dark:text-cyan-400 bg-yellow-50/50 dark:bg-yellow-900/10">{item.ownQty || ''}</td>
+                                <td className="py-2 text-center font-medium text-slate-700 dark:text-slate-300 bg-yellow-50/50 dark:bg-yellow-900/10">{item.totalConsumption || ''}</td>
+                                <td className="py-2 text-center text-slate-500 tabular-nums border-r border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">{item.valConsumption > 0 ? item.valConsumption.toFixed(1) + ' €' : ''}</td>
+                                <td className="py-2 text-center font-bold text-slate-800 dark:text-white bg-yellow-50/50 dark:bg-yellow-900/10">{item.endingStock}</td>
+                                <td className="py-2 text-center font-medium text-slate-800 dark:text-slate-200 tabular-nums">{item.valEnding.toFixed(1)} €</td>
                              </tr>
                            ))}
                          </React.Fragment>
@@ -650,12 +782,12 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                     </tbody>
                     <tfoot>
                        <tr className="bg-slate-50 dark:bg-slate-800 font-bold text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-700">
-                          <td colSpan={5} className="py-3 px-3 text-right uppercase text-xs tracking-wider">{t('total')}</td>
+                          <td colSpan={3} className="py-3 px-3 text-right uppercase text-xs tracking-wider">{t('total')}</td>
                           <td className="py-3 text-center"></td><td className="py-3 text-center tabular-nums text-xs">{monthlyTotals.valInitial.toFixed(1)} €</td>
                           <td className="py-3 text-center bg-green-50/20 dark:bg-green-900/10"></td><td className="py-3 text-center tabular-nums text-xs text-green-700 dark:text-green-400 bg-green-50/20 dark:bg-green-900/10">{monthlyTotals.valTotalSupply > 0 ? monthlyTotals.valTotalSupply.toFixed(1) + ' €' : ''}</td>
-                          <td className="py-3 text-center bg-blue-50/20 dark:bg-blue-900/10"></td><td className="py-3 text-center tabular-nums text-xs text-blue-700 dark:text-blue-400 bg-blue-50/20 dark:bg-blue-900/10">{monthlyTotals.crewVal > 0 ? monthlyTotals.crewVal.toFixed(1) + ' €' : ''}</td>
-                          <td className="py-3 text-center bg-orange-50/20 dark:bg-orange-900/10"></td><td className="py-3 text-center tabular-nums text-xs text-orange-700 dark:text-orange-400 bg-orange-50/20 dark:bg-orange-900/10">{monthlyTotals.chartVal > 0 ? monthlyTotals.chartVal.toFixed(1) + ' €' : ''}</td>
-                          <td className="py-3 text-center bg-cyan-50/20 dark:bg-cyan-900/10"></td><td className="py-3 text-center tabular-nums text-xs text-cyan-700 dark:text-cyan-400 bg-cyan-50/20 dark:bg-cyan-900/10">{monthlyTotals.ownVal > 0 ? monthlyTotals.ownVal.toFixed(1) + ' €' : ''}</td>
+                          <td className="py-3 text-center bg-blue-50/20 dark:bg-blue-900/10"></td>
+                          <td className="py-3 text-center bg-orange-50/20 dark:bg-orange-900/10"></td>
+                          <td className="py-3 text-center bg-cyan-50/20 dark:bg-cyan-900/10"></td>
                           <td className="py-3 text-center bg-slate-50 dark:bg-slate-800"></td><td className="py-3 text-center tabular-nums text-xs bg-slate-50 dark:bg-slate-800">{monthlyTotals.valConsumption.toFixed(1)} €</td>
                           <td className="py-3 text-center"></td><td className="py-3 text-center tabular-nums text-xs">{monthlyTotals.valEnding.toFixed(1)} €</td>
                        </tr>
@@ -678,7 +810,7 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                            <React.Fragment key={group.category}>
                               <tr className="bg-slate-50 dark:bg-slate-800/50"><td colSpan={15} className="py-2 px-3 font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest text-[10px]">{group.category}</td></tr>
                               {group.items.map(item => (
-                                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors"><td className="py-2 px-3 font-medium text-slate-700 dark:text-slate-200">{item.name} <span className="text-slate-400 ml-1 text-[10px]">({item.unitType})</span></td><td className="py-2 text-center text-slate-400">{item.chartWeeks[0] || '-'}</td><td className="py-2 text-center text-slate-400">{item.chartWeeks[1] || '-'}</td><td className="py-2 text-center text-slate-400">{item.chartWeeks[2] || '-'}</td><td className="py-2 text-center text-slate-400">{item.chartWeeks[3] || '-'}</td><td className="py-2 text-center text-slate-400">{item.chartWeeks[4] || '-'}</td><td className="py-2 text-center font-medium text-slate-700 dark:text-slate-300 bg-orange-50/50 dark:bg-orange-900/10 rounded">{item.chartQty || '-'}</td><td className="py-2 text-right tabular-nums text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800 pr-2">{item.chartVal > 0 ? item.chartVal.toFixed(2) : '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[0] || '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[1] || '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[2] || '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[3] || '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[4] || '-'}</td><td className="py-2 text-center font-medium text-slate-700 dark:text-slate-300 bg-cyan-50/50 dark:bg-cyan-900/10 rounded">{item.ownQty || '-'}</td><td className="py-2 text-right tabular-nums text-slate-600 dark:text-slate-400 pr-2">{item.ownVal > 0 ? item.ownVal.toFixed(2) : '-'}</td></tr>
+                                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors"><td className="py-2 px-3 font-medium text-slate-700 dark:text-slate-200">{item.name} <span className="text-slate-400 ml-1 text-[10px]">({item.unitType})</span></td><td className="py-2 text-center text-slate-400">{item.chartWeeks[0] || '-'}</td><td className="py-2 text-center text-slate-400">{item.chartWeeks[1] || '-'}</td><td className="py-2 text-center text-slate-400">{item.chartWeeks[2] || '-'}</td><td className="py-2 text-center text-slate-400">{item.chartWeeks[3] || '-'}</td><td className="py-2 text-center text-slate-400">{item.chartWeeks[4] || '-'}</td><td className="py-2 text-center font-medium text-slate-700 dark:text-slate-300 bg-orange-50/50 dark:bg-orange-900/10 rounded">{item.chartQty || '-'}</td><td className="py-2 text-right tabular-nums text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800 pr-2">{item.chartVal > 0 ? item.chartVal.toFixed(2) + ' €' : '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[0] || '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[1] || '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[2] || '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[3] || '-'}</td><td className="py-2 text-center text-slate-400">{item.ownWeeks[4] || '-'}</td><td className="py-2 text-center font-medium text-slate-700 dark:text-slate-300 bg-cyan-50/50 dark:bg-cyan-900/10 rounded">{item.ownQty || '-'}</td><td className="py-2 text-right tabular-nums text-slate-600 dark:text-slate-400 pr-2">{item.ownVal > 0 ? item.ownVal.toFixed(2) + ' €' : '-'}</td></tr>
                               ))}
                            </React.Fragment>
                          ))}
@@ -703,73 +835,30 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                         <p className="text-lg font-mono font-bold text-red-600 dark:text-red-500">{formatDate(orderDate)}</p>
                       </div>
                    </div>
-                   
                    <div className="overflow-x-auto pb-4">
                      <table className="w-full text-left border-collapse text-[11px] print:text-[9px]">
                         <thead>
                            <tr className="bg-[#1e3a8a] text-white print:bg-[#1e3a8a] print:text-white">
-                             <th 
-                              className="p-3 border border-[#1e3a8a] text-center w-10 print:p-1"
-                              style={{ fontSize: `${orderHeaderFontSize}px` }}
-                             >
-                               #
-                             </th>
-                             <th 
-                              className="p-3 border border-[#1e3a8a] w-56 font-bold uppercase print:p-1"
-                              style={{ fontSize: `${orderHeaderFontSize}px` }}
-                             >
-                               {t('name')}
-                             </th>
-                             <th 
-                              className="p-3 border border-[#1e3a8a] w-36 font-bold uppercase print:p-1"
-                              style={{ fontSize: `${orderHeaderFontSize}px` }}
-                             >
-                               {t('rank')}
-                             </th>
+                             <th className="p-3 border border-[#1e3a8a] text-center w-10 print:p-1" style={{ fontSize: `${orderHeaderFontSize}px` }}>#</th>
+                             <th className="p-3 border border-[#1e3a8a] w-56 font-bold uppercase print:p-1" style={{ fontSize: `${orderHeaderFontSize}px` }}>{t('name')}</th>
+                             <th className="p-3 border border-[#1e3a8a] w-36 font-bold uppercase print:p-1" style={{ fontSize: `${orderHeaderFontSize}px` }}>{t('rank')}</th>
                              {products.sort((a,b) => CATEGORIES.indexOf(a.category) - CATEGORIES.indexOf(b.category) || a.name.localeCompare(b.name)).map(p => (
                                <th key={p.id} className="p-0 border border-[#1e3a8a] w-10 align-bottom h-40 print:h-24">
                                  <div className="flex justify-center items-end h-full pb-4 print:pb-2">
-                                   <span 
-                                    className="whitespace-nowrap [writing-mode:vertical-rl] rotate-180 font-bold tracking-widest"
-                                    style={{ fontSize: `${orderHeaderFontSize}px` }}
-                                   >
-                                     {p.name}
-                                   </span>
+                                   <span className="whitespace-nowrap [writing-mode:vertical-rl] rotate-180 font-bold tracking-widest" style={{ fontSize: `${orderHeaderFontSize}px` }}>{p.name}</span>
                                  </div>
                                </th>
                              ))} 
-                             <th 
-                              className="p-3 border border-[#1e3a8a] w-40 text-center font-bold uppercase print:p-1"
-                              style={{ fontSize: `${orderHeaderFontSize}px` }}
-                             >
-                               {t('signature')}
-                             </th>
+                             <th className="p-3 border border-[#1e3a8a] w-40 text-center font-bold uppercase print:p-1" style={{ fontSize: `${orderHeaderFontSize}px` }}>{t('signature')}</th>
                            </tr>
                         </thead>
                         <tbody>
                            {crew.filter(c => c.isActive).sort((a,b) => RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank) || a.name.localeCompare(b.name)).map((member, idx) => (
                              <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 print:hover:bg-transparent">
-                               <td 
-                                className="p-3 border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-400 print:p-1"
-                                style={{ fontSize: `${orderTableFontSize}px` }}
-                               >
-                                 {idx + 1}
-                               </td>
-                               <td 
-                                 className="p-3 border border-slate-300 dark:border-slate-600 font-bold text-slate-800 dark:text-white print:p-1"
-                                 style={{ fontSize: `${orderTableFontSize}px` }}
-                               >
-                                 {member.name}
-                               </td>
-                               <td 
-                                 className="p-3 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 font-medium print:p-1"
-                                 style={{ fontSize: `${orderTableFontSize}px` }}
-                               >
-                                 {member.rank}
-                               </td>
-                               {products.map(p => (
-                                 <td key={p.id} className="p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 print:p-1"></td>
-                               ))} 
+                               <td className="p-3 border border-slate-300 dark:border-slate-600 text-center font-bold text-slate-400 print:p-1" style={{ fontSize: `${orderTableFontSize}px` }}>{idx + 1}</td>
+                               <td className="p-3 border border-slate-300 dark:border-slate-600 font-bold text-slate-800 dark:text-white print:p-1" style={{ fontSize: `${orderTableFontSize}px` }}>{member.name}</td>
+                               <td className="p-3 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 font-medium print:p-1" style={{ fontSize: `${orderTableFontSize}px` }}>{member.rank}</td>
+                               {products.map(p => (<td key={p.id} className="p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 print:p-1"></td>))} 
                                <td className="p-3 border border-slate-300 dark:border-slate-600 h-10 print:p-1"></td>
                              </tr>
                            ))}
@@ -777,7 +866,6 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                      </table>
                    </div>
                </div>
-               <p className="mt-4 text-xs text-slate-500 italic no-print">Portrait of the exported document. All product columns are generated automatically.</p>
              </div>
           )}
           {activeTab === 'INVENTORY' && (
@@ -803,21 +891,12 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
                    </div>
                    <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t('filter_by_recipient')}</label>
                  </div>
-                 <select 
-                    value={historyRecipientFilter}
-                    onChange={(e) => setHistoryRecipientFilter(e.target.value)}
-                    className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-2 text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-64 shadow-sm"
-                 >
+                 <select value={historyRecipientFilter} onChange={(e) => setHistoryRecipientFilter(e.target.value)} className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg p-2 text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-64 shadow-sm">
                     <option value="ALL">{t('all_recipients')}</option>
-                    <optgroup label={t('crew')}>
-                      {sortedCrew.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.rank}){!c.isActive ? ` - ${t('inactive')}` : ''}</option>
-                      ))}
-                    </optgroup>
+                    <optgroup label={t('crew')}>{sortedCrew.map(c => (<option key={c.id} value={c.id}>{c.name} ({c.rank}){!c.isActive ? ` - ${t('inactive')}` : ''}</option>))}</optgroup>
                     <option value="REPRESENTATION">{t('representation')}</option>
                  </select>
               </div>
-
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
