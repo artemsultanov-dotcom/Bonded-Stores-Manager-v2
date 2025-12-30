@@ -24,8 +24,6 @@ const CATEGORIES = ['Cigarettes', 'Soft Drinks', 'Water', 'Snacks', 'Other'];
 
 const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20];
 
-const LOGO_URL = 'https://www.cldn.com/sites/default/files/CLdN_Logo_worldwide_logistiscs_specialist-.jpg';
-
 export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, products, transactions, settings, updateTransaction, t }) => {
   const [activeTab, setActiveTab] = useState<'PAYROLL' | 'INVENTORY' | 'HISTORY' | 'MONTHLY' | 'REPRESENTATION' | 'ORDER_SHEET'>('PAYROLL');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -345,15 +343,11 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     const doc = new jsPDF({ orientation: 'landscape' });
     const pageWidth = doc.internal.pageSize.getWidth();
     
-    try {
-      doc.addImage(LOGO_URL, 'JPEG', 14, 5, 40, 10);
-    } catch (e) {
-      console.warn("Could not load logo in PDF", e);
-    }
-
     doc.setFont("helvetica", "bold"); 
-    doc.setFontSize(14); 
+    doc.setFontSize(20); 
+    doc.setTextColor(0, 32, 96); // Dark Blue
     doc.text(t('monthly_title'), pageWidth / 2, 15, { align: "center" });
+    doc.setTextColor(0, 0, 0); // Reset to black
     
     const head: any[] = [
       [
@@ -422,6 +416,8 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
     doc.line(20, sigY, 100, sigY); doc.text(t('master'), 20, sigY + 5);
     doc.setFont("helvetica", "bold"); doc.text(settings.masterName, 20, sigY + 10);
+    doc.setFont("helvetica", "normal"); doc.line(pageWidth - 100, sigY, pageWidth - 20, sigY);
+    doc.text(t('keeper'), pageWidth - 100, sigY + 5);
 
     await savePDF(doc, `MonthlyReport_${settings.reportYear}_${settings.reportMonth}.pdf`);
   };
@@ -433,8 +429,10 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
 
     // Title (matching Monthly Report)
     doc.setFont("helvetica", "bold"); 
-    doc.setFontSize(14); 
+    doc.setFontSize(20); 
+    doc.setTextColor(0, 32, 96); // Dark Blue
     doc.text(t('rep_title'), pageWidth / 2, 15, { align: "center" });
+    doc.setTextColor(0, 0, 0); // Reset to black
     
     const head: any[] = [
       [
@@ -519,24 +517,11 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
       headStyles: { fillColor: [0, 32, 96], textColor: [255, 255, 255], lineColor: [255, 255, 255], lineWidth: 0.2, fontStyle: 'normal' }, 
       bodyStyles: { lineColor: [0, 0, 0], lineWidth: 0.2 },
       columnStyles: { 
-        0: { cellWidth: 60, halign: 'left' }, 
-        1: { cellWidth: 18, halign: 'center' }, 
-        2: { cellWidth: 18, halign: 'center' }, 
-        3: { cellWidth: 18, halign: 'center' }, 
-        4: { cellWidth: 10, halign: 'center' }, 
-        5: { cellWidth: 10, halign: 'center' }, 
-        6: { cellWidth: 10, halign: 'center' }, 
-        7: { cellWidth: 10, halign: 'center' }, 
-        8: { cellWidth: 10, halign: 'center' }, 
-        9: { cellWidth: 10, halign: 'center' }, 
-        10: { cellWidth: 20, halign: 'center' },
-        11: { cellWidth: 10, halign: 'center' }, 
-        12: { cellWidth: 10, halign: 'center' }, 
-        13: { cellWidth: 10, halign: 'center' }, 
-        14: { cellWidth: 10, halign: 'center' }, 
-        15: { cellWidth: 10, halign: 'center' },
-        16: { cellWidth: 10, halign: 'center' }, 
-        17: { cellWidth: 20, halign: 'center' }
+        0: { cellWidth: 45 }, 1: { cellWidth: 12 }, 2: { cellWidth: 18 }, 3: { cellWidth: 15 }, 
+        4: { cellWidth: 10 }, 5: { cellWidth: 10 }, 6: { cellWidth: 10 }, 7: { cellWidth: 10 }, 8: { cellWidth: 10 }, 
+        9: { cellWidth: 12 }, 10: { cellWidth: 20 },
+        11: { cellWidth: 10 }, 12: { cellWidth: 10 }, 13: { cellWidth: 10 }, 14: { cellWidth: 10 }, 15: { cellWidth: 10 },
+        16: { cellWidth: 12 }, 17: { cellWidth: 20 }
       } 
     });
 
@@ -547,9 +532,10 @@ export const FinancialReports: React.FC<FinancialReportsProps> = ({ crew, produc
     if (sigY + 20 > pageHeight) { doc.addPage(); sigY = 30; }
     
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    doc.line(100, sigY, 20, sigY); doc.text(t('master'), 20, sigY + 5);
+    doc.line(20, sigY, 100, sigY); doc.text(t('master'), 20, sigY + 5);
     doc.setFont("helvetica", "bold"); doc.text(settings.masterName, 20, sigY + 10);
-   
+    doc.setFont("helvetica", "normal"); doc.line(pageWidth - 100, sigY, pageWidth - 20, sigY);
+    doc.text(t('keeper'), pageWidth - 100, sigY + 5);
 
     await savePDF(doc, `Representation_Report_${settings.reportYear}_${settings.reportMonth}.pdf`);
   };
