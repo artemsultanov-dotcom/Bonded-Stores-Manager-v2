@@ -1,29 +1,32 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { Product, Transaction, TransactionType } from '../types';
-// Fixed: Added 'X' to the lucide-react imports
-import { Package, Plus, Edit2, Trash2, Save, Cigarette, ChevronDown, ListFilter, X } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Product, Transaction, TransactionType, ReportSettings } from '../types';
+import { Package, Plus, Edit2, Trash2, Save, Cigarette, ChevronDown, ListFilter, X, Euro, PoundSterling } from 'lucide-react';
 
 interface InventoryManagerProps {
   products: Product[];
   setProducts: (products: Product[]) => void;
   transactions: Transaction[];
+  settings: ReportSettings; // Added settings prop
   t: (key: string) => string;
 }
 
 const CATEGORIES = ['Cigarettes', 'Soft Drinks', 'Water', 'Snacks', 'Other'];
 
-export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, setProducts, transactions, t }) => {
+export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, setProducts, transactions, settings, t }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
-    name: '', category: CATEGORIES[0], price: '', unitType: 'pcs', packSize: '1',
+    name: '', category: CATEGORIES[0], priceEUR: '', priceGBP: '', unitType: 'pcs', packSize: '1',
     initialStock: '', addedStock1: '', addedStock2: '', addedStock3: ''
   });
 
   const resetForm = () => {
-    setForm({ name: '', category: CATEGORIES[0], price: '', unitType: 'pcs', packSize: '1', initialStock: '', addedStock1: '', addedStock2: '', addedStock3: '' });
+    setForm({ 
+      name: '', category: CATEGORIES[0], priceEUR: '', priceGBP: '', unitType: 'pcs', packSize: '1', 
+      initialStock: '', addedStock1: '', addedStock2: '', addedStock3: '' 
+    });
     setIsAdding(false); setEditingId(null);
   };
 
@@ -31,10 +34,15 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
     if (!form.name) return;
     const prodData: Product = {
       id: editingId || crypto.randomUUID(),
-      name: form.name, category: form.category, price: Number(form.price) || 0,
-      unitType: form.unitType, packSize: Number(form.packSize) || 1,
+      name: form.name, 
+      category: form.category, 
+      price: Number(form.priceEUR) || 0, // Always save in EUR
+      unitType: form.unitType, 
+      packSize: Number(form.packSize) || 1,
       initialStock: Number(form.initialStock) || 0,
-      addedStock1: Number(form.addedStock1) || 0, addedStock2: Number(form.addedStock2) || 0, addedStock3: Number(form.addedStock3) || 0
+      addedStock1: Number(form.addedStock1) || 0, 
+      addedStock2: Number(form.addedStock2) || 0, 
+      addedStock3: Number(form.addedStock3) || 0
     };
     if (editingId) setProducts(products.map(p => p.id === editingId ? prodData : p));
     else setProducts([...products, prodData]);
@@ -44,11 +52,37 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
   const startEdit = (p: Product) => {
     setEditingId(p.id);
     setForm({
-      name: p.name, category: p.category, price: p.price.toString(), unitType: p.unitType || 'pcs', packSize: p.packSize?.toString() || '1',
-      initialStock: p.initialStock.toString(), addedStock1: p.addedStock1.toString(), addedStock2: p.addedStock2.toString(), addedStock3: p.addedStock3.toString()
+      name: p.name, 
+      category: p.category, 
+      priceEUR: p.price.toString(), // Always store EUR price
+      priceGBP: settings.useGbpForPurchases && settings.gpbExchangeRate > 0 
+                  ? (p.price * settings.gpbExchangeRate).toFixed(3) 
+                  : '', // Calculate GBP if relevant
+      unitType: p.unitType || 'pcs', 
+      packSize: p.packSize?.toString() || '1',
+      initialStock: p.initialStock.toString(), 
+      addedStock1: p.addedStock1.toString(), 
+      addedStock2: p.addedStock2.toString(), 
+      addedStock3: p.addedStock3.toString()
     });
     setIsAdding(true);
     setTimeout(() => nameInputRef.current?.focus(), 100);
+  };
+
+  const handlePriceGBPChange = (value: string) => {
+    const gbpValue = Number(value);
+    setForm(prev => ({
+      ...prev,
+      priceGBP: value,
+      priceEUR: gbpValue && settings.gpbExchangeRate > 0 ? (gbpValue / settings.gpbExchangeRate).toFixed(3) : ''
+    }));
+  };
+
+  const handlePriceEURChange = (value: string) => {
+    setForm(prev => ({
+      ...prev,
+      priceEUR: value
+    }));
   };
 
   const getProductStats = (p: Product) => {
@@ -113,24 +147,67 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({ products, se
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="lg:col-span-2 group">
               <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1 group-focus-within:text-blue-600 transition-colors">{t('name')}</label>
-              <input ref={nameInputRef} type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold" />
+              <input ref={nameInputRef} type="text" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-normal" />
             </div>
             <div className="group">
               <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('category')}</label>
-              <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold appearance-none">{CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
+              <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-normal appearance-none">{CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select>
             </div>
-            <div className="group">
-              <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('price')}</label>
-              <input type="number" step="0.001" value={form.price} onChange={e => setForm({...form, price: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold" />
-            </div>
+            
+            {settings.useGbpForPurchases ? (
+              <>
+                <div className="group">
+                  <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('price_gbp')}</label>
+                  <div className="relative">
+                    <PoundSterling className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="number" 
+                      step="0.001" 
+                      value={form.priceGBP} 
+                      onChange={e => handlePriceGBPChange(e.target.value)} 
+                      className="w-full pl-9 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-normal" 
+                    />
+                  </div>
+                </div>
+                <div className="group">
+                  <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('price')} (€)</label>
+                  <div className="relative">
+                    <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="number" 
+                      step="0.001" 
+                      value={form.priceEUR} 
+                      readOnly 
+                      disabled 
+                      className="w-full pl-9 pr-4 py-3 bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-2xl outline-none cursor-not-allowed font-normal text-slate-600 dark:text-slate-400" 
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="group">
+                <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('price')} (€)</label>
+                <div className="relative">
+                  <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="number" 
+                    step="0.001" 
+                    value={form.priceEUR} 
+                    onChange={e => handlePriceEURChange(e.target.value)} 
+                    className="w-full pl-9 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none font-normal" 
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="group">
               <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t('initial_stock')}</label>
-              <input type="number" value={form.initialStock} onChange={e => setForm({...form, initialStock: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold" />
+              <input type="number" value={form.initialStock} onChange={e => setForm({...form, initialStock: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-normal" />
             </div>
             {['1', '2', '3'].map(num => (
               <div key={num} className="group">
                  <label className="text-[10px] font-black uppercase text-slate-500 mb-2 block px-1">{t(`supply_${num}`)}</label>
-                 <input type="number" value={(form as any)[`addedStock${num}`]} onChange={e => setForm({...form, [`addedStock${num}`]: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold" />
+                 <input type="number" value={(form as any)[`addedStock${num}`]} onChange={e => setForm({...form, [`addedStock${num}`]: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-normal" />
               </div>
             ))}
           </div>
