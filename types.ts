@@ -51,6 +51,8 @@ export interface ReportSettings {
   reportMonth: string; // "01" to "12"
   reportYear: string; // "2024"
   exchangeRate: number; // EUR to USD rate
+  gpbExchangeRate: number; // EUR to GBP rate
+  useGbpForPurchases: boolean; // Flag if purchases are made in GBP
 }
 
 export type ViewState = 'DASHBOARD' | 'CREW' | 'INVENTORY' | 'DISTRIBUTION' | 'REPORTS' | 'INSTRUCTION';
