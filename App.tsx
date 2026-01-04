@@ -62,7 +62,9 @@ function App() {
       masterName: '',
       reportMonth: String(today.getMonth() + 1).padStart(2, '0'),
       reportYear: String(today.getFullYear()),
-      exchangeRate: 1.1000
+      exchangeRate: 1.1000,
+      gpbExchangeRate: 0.8500, // Default value for EUR to GBP
+      useGbpForPurchases: false // Default to not using GBP for purchases
     };
     
     if (saved) {
@@ -92,7 +94,8 @@ function App() {
             const item = t.items.find(i => i.productId === p.id);
             return sum + (item ? item.quantity : 0);
         }, 0);
-        const stock = (p.initialStock + p.addedStock1 + p.addedStock2 + p.addedStock3) - out;
+        const totalAdded = p.addedStock1 + p.addedStock2 + p.addedStock3;
+        const stock = (p.initialStock + totalAdded) - out;
         return acc + (stock * p.price);
     }, 0);
     const monthSales = transactions.reduce((acc, t) => acc + t.totalAmount, 0);
@@ -133,7 +136,9 @@ function App() {
       vesselName: '', masterName: '', 
       reportMonth: String(new Date().getMonth() + 1).padStart(2, '0'),
       reportYear: String(new Date().getFullYear()), 
-      exchangeRate: 1.1000
+      exchangeRate: 1.1000,
+      gpbExchangeRate: 0.8500, // Reset default
+      useGbpForPurchases: false // Reset default
     });
   };
 
@@ -227,7 +232,7 @@ function App() {
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
              <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-                <Box className="w-6 h-6 text-white" />
+                <Box className="w-6 h-6" />
              </div>
              <div>
                 <h1 className="font-bold text-lg leading-tight tracking-tight">BSM Pro</h1>
@@ -326,7 +331,7 @@ function App() {
 
             {currentView === 'DASHBOARD' && <Dashboard settings={reportSettings} setSettings={setReportSettings} onResetMonth={handleMonthReset} onHardReset={handleHardReset} t={t} />}
             {currentView === 'CREW' && <CrewManager crew={crew} setCrew={setCrew} t={t} />}
-            {currentView === 'INVENTORY' && <InventoryManager products={products} setProducts={setProducts} transactions={transactions} t={t} />}
+            {currentView === 'INVENTORY' && <InventoryManager products={products} setProducts={setProducts} transactions={transactions} settings={reportSettings} t={t} />}
             {currentView === 'DISTRIBUTION' && <DistributionCenter crew={crew} products={products} transactions={transactions} addTransaction={addTransaction} t={t} />}
             {currentView === 'REPORTS' && <FinancialReports crew={crew} products={products} transactions={transactions} updateTransaction={handleUpdateTransaction} settings={reportSettings} t={t} />}
             {currentView === 'INSTRUCTION' && <Instruction t={t} />}
