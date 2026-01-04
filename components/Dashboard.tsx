@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ReportSettings } from '../types';
 import { Ship, User, Calendar, Settings, AlertTriangle, ArrowRight, DollarSign, Trash2, Globe, ShieldAlert } from 'lucide-react';
@@ -43,11 +42,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ settings, setSettings, onR
                <div className="space-y-6">
                   <div className="group">
                      <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1 group-focus-within:text-blue-600 transition-colors">{t('vessel_name')}</label>
-                     <input type="text" value={settings.vesselName} onChange={e => setSettings({...settings, vesselName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold" placeholder="MV Example" />
+                     <input type="text" value={settings.vesselName} onChange={e => setSettings({...settings, vesselName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-normal" placeholder="MV Example" />
                   </div>
                   <div className="group">
                      <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1 group-focus-within:text-blue-600 transition-colors">{t('master_name')}</label>
-                     <input type="text" value={settings.masterName} onChange={e => setSettings({...settings, masterName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold" placeholder="Capt. John Doe" />
+                     <input type="text" value={settings.masterName} onChange={e => setSettings({...settings, masterName: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-normal" placeholder="Capt. John Doe" />
                   </div>
                </div>
                
@@ -55,19 +54,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ settings, setSettings, onR
                   <div className="grid grid-cols-2 gap-4">
                      <div className="group">
                         <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1">{t('report_year')}</label>
-                        <input type="number" value={settings.reportYear} onChange={e => setSettings({...settings, reportYear: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold" />
+                        <input type="number" value={settings.reportYear} onChange={e => setSettings({...settings, reportYear: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-normal" />
                      </div>
                      <div className="group">
                         <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1">{t('exchange_rate')}</label>
                         <div className="relative">
                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                           <input type="number" step="0.0001" value={settings.exchangeRate} onChange={e => setSettings({...settings, exchangeRate: Number(e.target.value)})} className="w-full pl-9 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-bold" />
+                           <input type="number" step="0.0001" value={settings.exchangeRate} onChange={e => setSettings({...settings, exchangeRate: Number(e.target.value)})} className="w-full pl-9 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-normal" />
                         </div>
+                     </div>
+                     <div className="group">
+                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1">{t('eur_gbp_rate')}</label>
+                        <div className="relative">
+                           <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                           <input type="number" step="0.0001" value={settings.gpbExchangeRate} onChange={e => setSettings({...settings, gpbExchangeRate: Number(e.target.value)})} className="w-full pl-9 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-normal" />
+                        </div>
+                     </div>
+                     <div className="group flex items-end">
+                       <label className="relative inline-flex items-center cursor-pointer mb-2 px-1">
+                          <input 
+                            type="checkbox" 
+                            className="sr-only peer" 
+                            checked={settings.useGbpForPurchases} 
+                            onChange={e => setSettings({...settings, useGbpForPurchases: e.target.checked})} 
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                          <span className="ml-3 text-sm font-medium text-slate-700 dark:text-slate-300">{t('use_gbp_for_purchases')}</span>
+                        </label>
                      </div>
                   </div>
                   <div className="group">
                      <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2 block px-1">{t('report_month')}</label>
-                     <select value={settings.reportMonth} onChange={e => setSettings({...settings, reportMonth: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 font-bold appearance-none cursor-pointer">
+                     <select value={settings.reportMonth} onChange={e => setSettings({...settings, reportMonth: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 outline-none focus:ring-4 focus:ring-blue-500/10 font-normal appearance-none cursor-pointer">
                         {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                      </select>
                   </div>
@@ -108,8 +126,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ settings, setSettings, onR
              <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-3xl mb-8 border border-slate-100 dark:border-slate-800">
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 text-center">Select Starting Period</label>
                 <div className="flex gap-3">
-                   <select value={nextMonth} onChange={e => setNextMonth(e.target.value)} className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold text-sm">{months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select>
-                   <input type="number" value={nextYear} onChange={e => setNextYear(e.target.value)} className="w-28 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-bold text-sm" />
+                   <select value={nextMonth} onChange={e => setNextMonth(e.target.value)} className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-normal text-sm">{months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select>
+                   <input type="number" value={nextYear} onChange={e => setNextYear(e.target.value)} className="w-28 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3 outline-none font-normal text-sm" />
                 </div>
              </div>
 
