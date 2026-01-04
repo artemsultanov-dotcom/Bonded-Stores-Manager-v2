@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { CrewMember } from '../types';
 import { Users, Plus, Trash2, Edit2, Save, FileText } from 'lucide-react';
@@ -200,7 +201,7 @@ export const CrewManager: React.FC<CrewManagerProps> = ({ crew, setCrew, t }) =>
                 type="text" 
                 value={name} 
                 onChange={(e) => setName(e.target.value)} 
-                className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none font-normal"
                 placeholder="Ivanov Ivan"
               />
             </div>
@@ -209,7 +210,7 @@ export const CrewManager: React.FC<CrewManagerProps> = ({ crew, setCrew, t }) =>
               <select 
                 value={rank} 
                 onChange={(e) => setRank(e.target.value)} 
-                className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none font-normal"
               >
                 <option value="">{t('select_rank')}</option>
                 {RANKS.map(r => (
@@ -222,7 +223,7 @@ export const CrewManager: React.FC<CrewManagerProps> = ({ crew, setCrew, t }) =>
               <select 
                 value={currency} 
                 onChange={(e) => setCurrency(e.target.value as 'EUR'|'USD')} 
-                className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full bg-white text-slate-900 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none font-normal"
               >
                 <option value="EUR">EUR (€)</option>
                 <option value="USD">USD ($)</option>
