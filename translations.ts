@@ -1,4 +1,5 @@
 
+
 import { Language } from './types';
 
 type Translations = {
@@ -22,6 +23,8 @@ export const translations: Translations = {
     report_month: "Report Month",
     report_year: "Report Year",
     exchange_rate: "EUR/USD Rate",
+    eur_gbp_rate: "EUR/GBP Rate",
+    use_gbp_for_purchases: "Use GBP for Purchases",
     crew_list: "Crew List",
     add: "Add",
     add_crew: "Add Crew",
@@ -42,7 +45,8 @@ export const translations: Translations = {
     add_product: "Add Product",
     edit_product: "Edit Product",
     category: "Category",
-    price: "Price (€)",
+    price: "Price", // Changed to generic "Price" as currency symbol will be next to it
+    price_gbp: "Price (GBP)", // New key for GBP price
     initial_stock: "Initial Stock",
     added_stock: "Total Added",
     supply_1: "Supply 1",
